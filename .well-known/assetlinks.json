@@ -1,0 +1,6 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": { "namespace": "android_app", "package_name": "com.liorrabanian.letsrun", "sha256_cert_fingerprints": ["A1:02:96:AD:BA:40:DD:11:F8:49:6D:5E:0C:3D:BD:FD:97:FC:D9:84:72:92:8F:C9:6E:96:C5:C1:48:86:03:77"] }
+  }
+]

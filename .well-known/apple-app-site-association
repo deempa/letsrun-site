@@ -1,0 +1,7 @@
+{
+  "applinks": {
+    "details": [
+      { "appIDs": ["SW9DBTK667.com.liorrabanian.letsrun"], "components": [ { "/": "/c/*" }, { "/": "/r/*" } ] }
+    ]
+  }
+}

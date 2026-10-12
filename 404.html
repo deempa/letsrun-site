@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>בוא נרוץ</title>
+<!-- Shared links land here: GitHub Pages serves this page for any unknown path, so /c/<token> (a personal
+     connection link) and /r/<run id> (a shared run) are read from the address and handed to the app. -->
+<meta name="description" content="הוזמנת לבוא נרוץ — ריצות קבוצתיות בשכונה, בקצב שלך.">
+<meta property="og:title" content="בוא נרוץ">
+<meta property="og:description" content="הוזמנת לרוץ ביחד. פותחים את האפליקציה ומצטרפים.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap">
+<style>
+  :root { --bg:#FFFFFF; --surface:#F5F5F2; --hairline:#EAEAE6; --ink:#0E0E0E; --muted:#6B6B70; --volt:#D4FF3F; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0B0B0A; --surface:#171716; --hairline:#262624; --ink:#F4F4F0; --muted:#A3A39D; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Heebo","Arial Hebrew",system-ui,sans-serif;
+         min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px 16px; }
+  main { width:100%; max-width:420px; text-align:center; }
+  .mark { width:56px; height:56px; margin:0 auto 28px; position:relative; }
+  .mark::before { content:""; position:absolute; inset:0 18px 0 0; border-radius:50%; background:var(--volt); }
+  .mark::after { content:""; position:absolute; inset:0 0 0 18px; border-radius:50%; border:5px solid var(--ink); }
+  h1 { font-size:1.75rem; font-weight:800; margin:0 0 10px; letter-spacing:-0.02em; }
+  p { color:var(--muted); font-size:1.0625rem; line-height:1.55; margin:0 0 28px; }
+  .btn { display:flex; align-items:center; justify-content:center; height:56px; border-radius:999px; font-weight:700;
+         font-size:1.0625rem; text-decoration:none; margin-bottom:12px; }
+  .primary { background:var(--ink); color:var(--bg); }
+  .ghost { background:var(--surface); color:var(--ink); }
+  .note { font-size:0.875rem; margin-top:20px; }
+  a.home { color:var(--muted); font-size:0.875rem; }
+</style>
+</head>
+<body>
+<main>
+  <div class="mark" aria-hidden="true"></div>
+  <h1 id="title">בוא נרוץ</h1>
+  <p id="lead">הדף שחיפשת לא נמצא.</p>
+  <a class="btn primary" id="open" href="#" hidden>פתיחה באפליקציה</a>
+  <a class="btn ghost" id="ios" href="https://testflight.apple.com/join/U2SmA9NM" rel="noopener" hidden>אין לך את האפליקציה? הורדה לאייפון</a>
+  <p class="note" id="android" hidden>באנדרואיד — בקרוב ב-Google Play.</p>
+  <a class="home" id="home" href="./">לדף הבית של בוא נרוץ</a>
+</main>
+<script>
+(function () {
+  // Works both at the domain root (letsrun.co.il) and under a project path (…github.io/letsrun-site).
+  var path = location.pathname;
+  var m = path.match(/\/(c|r)\/([A-Za-z0-9_-]{6,64})\/?$/);
+  var base = path.replace(/\/(c|r)\/[^/]*\/?$/, '/').replace(/\/404\.html$/, '/');
+  document.getElementById('home').href = m ? base : base;
+  if (!m) return;
+  var kind = m[1], id = m[2];
+  var app = 'letsrun://' + kind + '/' + id;
+  document.title = kind === 'c' ? 'בוא נרוץ — בקשת חיבור' : 'בוא נרוץ — הוזמנת לריצה';
+  document.getElementById('title').textContent = kind === 'c' ? 'בואו נתחבר בבוא נרוץ' : 'הוזמנת לריצה';
+  document.getElementById('lead').textContent = kind === 'c'
+    ? 'פותחים את האפליקציה ושולחים בקשת חיבור. החיבור נוצר רק אחרי ששני הצדדים מאשרים.'
+    : 'פותחים את האפליקציה כדי לראות את הריצה ולהצטרף.';
+  var open = document.getElementById('open');
+  open.href = app; open.hidden = false;
+  document.getElementById('ios').hidden = false;
+  document.getElementById('android').hidden = false;
+  // On phones, try the app right away; if it isn't installed the page simply stays.
+  if (/iPhone|iPad|Android/i.test(navigator.userAgent)) {
+    setTimeout(function () { location.href = app; }, 350);
+  }
+})();
+</script>
+</body>
+</html>
