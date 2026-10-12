@@ -46,12 +46,19 @@
 <script>
 (function () {
   // Works both at the domain root (letsrun.co.il) and under a project path (…github.io/letsrun-site).
-  var path = location.pathname;
+  // Accepted forms: /c/<token>, /r/<id> (served by 404.html) and /c/?t=<token>, /r/?id=<id> (real pages, so link
+  // previews get a 200).
+  var path = location.pathname, q = new URLSearchParams(location.search);
   var m = path.match(/\/(c|r)\/([A-Za-z0-9_-]{6,64})\/?$/);
-  var base = path.replace(/\/(c|r)\/[^/]*\/?$/, '/').replace(/\/404\.html$/, '/');
-  document.getElementById('home').href = m ? base : base;
-  if (!m) return;
-  var kind = m[1], id = m[2];
+  var kind = m ? m[1] : null, id = m ? m[2] : null;
+  if (!m) {
+    var k = path.match(/\/(c|r)\/(index\.html)?$/);
+    var v = k && (q.get('t') || q.get('id'));
+    if (k && v && /^[A-Za-z0-9_-]{6,64}$/.test(v)) { kind = k[1]; id = v; }
+  }
+  var base = path.replace(/\/(c|r)\/[^/]*$/, '/').replace(/\/404\.html$/, '/');
+  document.getElementById('home').href = base;
+  if (!kind) return;
   var app = 'letsrun://' + kind + '/' + id;
   document.title = kind === 'c' ? 'בוא נרוץ — בקשת חיבור' : 'בוא נרוץ — הוזמנת לריצה';
   document.getElementById('title').textContent = kind === 'c' ? 'בואו נתחבר בבוא נרוץ' : 'הוזמנת לריצה';
