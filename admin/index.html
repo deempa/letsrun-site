@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ניהול · בוא נרוץ</title>
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://hpzekzgcexjuychyobxt.supabase.co; connect-src https://hpzekzgcexjuychyobxt.supabase.co wss://hpzekzgcexjuychyobxt.supabase.co; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#0E0E0E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="admin.css">
+<!-- supabase-js, pinned (the file the jsDelivr path names never changes; the hash below checks it). -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
+        integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
+        crossorigin="anonymous" defer></script>
+<script src="admin.js" defer></script>
+</head>
+<body>
+<!-- Admin page for בוא נרוץ (round 24). Not linked from the site. Everything it shows or changes goes through
+     admin_* RPCs that the database allows only for the accounts in private.admins. -->
+<header class="bar">
+  <div class="bar-row">
+    <span class="logo" aria-hidden="true"><span class="logo-fill"></span><span class="logo-ring"></span></span>
+    <b class="bar-title">ניהול</b>
+    <span class="bar-email" id="who" hidden></span>
+    <button type="button" class="bar-out" id="sign-out" hidden>יציאה</button>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="מדורים" id="tabs" hidden>
+    <button type="button" role="tab" id="tab-reports" aria-controls="view" data-tab="reports">דיווחים<span class="count" id="count-reports" hidden></span></button>
+    <button type="button" role="tab" id="tab-flags" aria-controls="view" data-tab="flags">סימונים<span class="count" id="count-flags" hidden></span></button>
+    <button type="button" role="tab" id="tab-words" aria-controls="view" data-tab="words">מילים</button>
+    <button type="button" role="tab" id="tab-log" aria-controls="view" data-tab="log">יומן</button>
+    <button type="button" role="tab" id="tab-settings" aria-controls="view" data-tab="settings">הגדרות</button>
+  </nav>
+</header>
+
+<main id="view" class="view" tabindex="-1" aria-live="polite">
+  <p class="loading"><span class="dot" aria-hidden="true"></span>טוענים…</p>
+</main>
+
+<!-- Sign-in: an email one-time code. -->
+<template id="t-signin">
+  <section class="panel signin">
+    <h1>כניסה לניהול</h1>
+    <p class="muted">שולחים קוד חד-פעמי למייל של חשבון מנהל.</p>
+    <form class="stack" id="email-form" novalidate>
+      <label class="field">
+        <span class="label">אימייל</span>
+        <input type="email" name="email" id="email" autocomplete="email" inputmode="email" dir="ltr" required>
+      </label>
+      <button type="submit" class="btn ink">שליחת קוד</button>
+      <p class="form-error" id="email-error" role="alert" hidden></p>
+    </form>
+  </section>
+</template>
+
+<template id="t-code">
+  <section class="panel signin">
+    <h1>מה הקוד?</h1>
+    <p class="muted">שלחנו קוד בן 6 ספרות אל <b id="code-email" dir="ltr"></b>. הוא בתוקף לזמן קצר.</p>
+    <form class="stack" id="code-form" novalidate>
+      <label class="field">
+        <span class="label">קוד</span>
+        <input type="text" name="code" id="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}"
+               maxlength="6" dir="ltr" class="code-input" required>
+      </label>
+      <button type="submit" class="btn ink">כניסה</button>
+      <p class="form-error" id="code-error" role="alert" hidden></p>
+    </form>
+    <div class="row-links">
+      <button type="button" class="btn text" id="resend">שליחה מחדש</button>
+      <button type="button" class="btn text" id="other-email">כתובת אחרת</button>
+    </div>
+  </section>
+</template>
+
+<template id="t-denied">
+  <section class="panel signin">
+    <h1>אין הרשאה</h1>
+    <p class="muted">החשבון הזה לא מוגדר כמנהל. אפשר לצאת ולהיכנס עם חשבון אחר.</p>
+    <button type="button" class="btn ink" id="denied-out">יציאה</button>
+  </section>
+</template>
+
+<!-- Asks for a short note before an action runs (suspension, removal, closing, a reviewed flag). -->
+<dialog id="confirm" class="sheet" aria-labelledby="confirm-title">
+  <form class="stack" id="confirm-form" novalidate>
+    <h2 id="confirm-title"></h2>
+    <p class="muted" id="confirm-text"></p>
+    <label class="field">
+      <span class="label" id="confirm-label"></span>
+      <textarea id="confirm-note" rows="3" maxlength="500"></textarea>
+    </label>
+    <p class="form-error" id="confirm-error" role="alert" hidden></p>
+    <div class="actions">
+      <button type="submit" class="btn ink" id="confirm-ok" value="ok"></button>
+      <button type="button" class="btn text" id="confirm-cancel">ביטול</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <span id="toast-text"></span>
+  <button type="button" class="toast-action" id="toast-action" hidden></button>
+</div>
+</body>
+</html>
