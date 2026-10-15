@@ -19,7 +19,7 @@
        P2 [N] moderation  how long moderation_log rows are kept; today there is no purge job, so either add one or
                           change the wording (Q-D3)
        P3 [N] mailbox     how long report emails / deletion requests are kept in the team's mailbox (Q-D3)
-       P4 [N] events      usage-event retention once round 25 events ship (spec: 90 days; Q-D5)
+       P4 events         resolved in round 25 (contract v27): raw events 400 days, then daily totals only (Q-D5)
        P5 30 days         deletion by email "as soon as possible, and within 30 days at the latest" (Q-D4) -->
 <header class="site-header">
   <div class="wrap">
@@ -71,7 +71,7 @@
         <li><b>משוב אחרי ריצה</b>, החסימות והדיווחים שלכם, דיווחים עליכם ורמת האמון.</li>
         <li><b>מזהי ההתראות</b> (Push) של המכשירים שלכם והעדפות ההתראה.</li>
         <li><b>נתוני שימוש</b> (פעולות באפליקציה, בלי טקסט ובלי מיקום) מנותקים מהחשבון ונשארים אנונימיים בלבד, עד
-          שהם נמחקים אחרי <span class="num">400</span> ימים.</li>
+          שהם נמחקים אחרי <span class="num">400</span> ימים. אחר כך נשארים רק סיכומים יומיים, בלי זיהוי.</li>
       </ul>
 
       <h2 id="kept">מה נשמר, ולכמה זמן</h2>
@@ -81,6 +81,9 @@
           בערעורים, למניעת שימוש חוזר לרעה ולמילוי חובות לפי דין. נשמרת עד <span class="num">90</span> ימים מהמחיקה.</li>
         <li><b>מיילים לצוות.</b> מיילים על דיווחים שכבר נשלחו לצוות, ובקשות מחיקה במייל, נשמרים בתיבת המייל של הצוות עד
           <span class="num">90</span> ימים.</li>
+        <li><b>דיווחי קריסה.</b> דיווחים טכניים על קריסות שכבר נשלחו ל־<span dir="ltr">Firebase Crashlytics</span>
+          (Google), עם מזהה פנימי של החשבון ובלי שם או מייל, נמחקים אצל Google לפי תקופת השמירה שלה, כ־<span
+          class="num">90</span> יום.</li>
         <li><b>גיבויים.</b> כרגע איננו שומרים עותקי גיבוי נפרדים של מסד הנתונים, ולכן המידע לא נשאר בגיבוי אחרי המחיקה.</li>
         <li><b>ריצות ששמרתם ב־Apple Health או ב־Health Connect</b> נשארות במכשיר שלכם, ומוחקים אותן משם.</li>
       </ul>
@@ -110,10 +113,11 @@
           and run cover photos, approximate location, group runs you created with their chats, your joins, requests and
           invites, your chat messages, connections, personal runs (routes, heart rate), feedback, blocks and reports,
           trust level, push tokens and notification settings. Usage events are unlinked from the account and kept only
-          anonymously, then deleted after 400 days.</p>
+          anonymously, then deleted after 400 days, leaving only daily totals with no identity.</p>
         <p><b>Kept:</b> the team's moderation log entries about the account (e.g. a suspension and its reason, or content
           the team removed), stored with an internal account ID and no profile, for appeals, abuse prevention and legal
-          obligations, for up to 90 days; report emails and deletion requests in the team's mailbox for up to 90 days.
+          obligations, for up to 90 days; crash reports already sent to Firebase Crashlytics (Google), with an internal account ID
+          and no name or email, until Google deletes them (about 90 days); report emails and deletion requests in the team's mailbox for up to 90 days.
           We do not currently keep separate database backups. Runs you saved to Apple
           Health or Health Connect stay on your device.</p>
       </section>
