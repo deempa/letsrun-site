@@ -15,7 +15,7 @@
 <!-- Draft for the owner to review (Google Play "Delete account URL"). Not legal advice.
      Before publishing, replace every bracketed placeholder (docs/store/README.md Q-D2–Q-D5, Q-L4):
        [Lior Rabanian]   developer name exactly as on the Play listing (Q-L4)
-       P1 [N] backups     Supabase backup retention on the chosen plan (Q-D2)
+       P1 backups         resolved 2026-10-15: daily encrypted backups (GitHub Actions), kept 30 days (Q-D2)
        P2 [N] moderation  how long moderation_log rows are kept; today there is no purge job, so either add one or
                           change the wording (Q-D3)
        P3 [N] mailbox     how long report emails / deletion requests are kept in the team's mailbox (Q-D3)
@@ -31,7 +31,7 @@
   <div class="wrap">
     <p class="eyebrow">בוא נרוץ</p>
     <h1>מחיקת חשבון</h1>
-    <p class="meta">האפליקציה "בוא נרוץ" · מפתח: <span dir="ltr">deempa</span> · עודכן ב־<span class="num">15</span> באוקטובר <span class="num">2026</span></p>
+    <p class="meta">האפליקציה "בוא נרוץ" · מפתח: <span dir="ltr">deempa</span> · עודכן ב־<span class="num">16</span> באוקטובר <span class="num">2026</span></p>
     <div class="body">
       <div class="callout">
         <p><b>בקצרה.</b> מוחקים את החשבון מתוך האפליקציה, בהגדרות. המחיקה מיידית ולצמיתות, באייפון ובאנדרואיד. אין
@@ -84,7 +84,7 @@
         <li><b>דיווחי קריסה.</b> דיווחים טכניים על קריסות שכבר נשלחו ל־<span dir="ltr">Firebase Crashlytics</span>
           (Google), עם מזהה פנימי של החשבון ובלי שם או מייל, נמחקים אצל Google לפי תקופת השמירה שלה, כ־<span
           class="num">90</span> יום.</li>
-        <li><b>גיבויים.</b> כרגע איננו שומרים עותקי גיבוי נפרדים של מסד הנתונים, ולכן המידע לא נשאר בגיבוי אחרי המחיקה.</li>
+        <li><b>גיבויים.</b> פעם ביום נשמר עותק גיבוי מוצפן של מסד הנתונים, וכל עותק נמחק אוטומטית אחרי <span class="num">30</span> יום. לכן המידע של החשבון נעלם גם מהגיבויים תוך <span class="num">30</span> יום מהמחיקה לכל היותר.</li>
         <li><b>ריצות ששמרתם ב־Apple Health או ב־Health Connect</b> נשארות במכשיר שלכם, ומוחקים אותן משם.</li>
       </ul>
       <p>מחיקת החשבון לא מוחקת את חשבון ה־Apple או ה־Google שאיתו נכנסתם.</p>
@@ -118,7 +118,7 @@
           the team removed), stored with an internal account ID and no profile, for appeals, abuse prevention and legal
           obligations, for up to 90 days; crash reports already sent to Firebase Crashlytics (Google), with an internal account ID
           and no name or email, until Google deletes them (about 90 days); report emails and deletion requests in the team's mailbox for up to 90 days.
-          We do not currently keep separate database backups. Runs you saved to Apple
+          An encrypted copy of the database is made once a day and deleted automatically after 30 days, so the account's data also leaves the backups within 30 days of deletion. Runs you saved to Apple
           Health or Health Connect stay on your device.</p>
       </section>
     </div>
