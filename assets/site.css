@@ -260,6 +260,6 @@ form.contact { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); 
 .article .meta { margin-top: 14px; color: var(--muted); font-size: var(--step--1); font-weight: 600; }
 .article .body { margin-top: 48px; display: flex; flex-direction: column; gap: 22px; font-size: 1.125rem; line-height: 1.8; }
 .article .body h2 { font-size: var(--step-2); font-weight: 800; margin-top: 20px; }
-.article .body ul { margin: 0; padding-inline-start: 1.2em; display: flex; flex-direction: column; gap: 8px; }
+.article .body ul, .article .body ol { margin: 0; padding-inline-start: 1.2em; display: flex; flex-direction: column; gap: 8px; }
 .article .callout { border-radius: var(--radius-m); background: var(--surface); padding: 24px; }
 .article .end { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--hairline); display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }

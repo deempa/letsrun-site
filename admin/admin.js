@@ -48,11 +48,23 @@
   };
   var TONES = ["var(--tone-1)", "var(--tone-2)", "var(--tone-3)", "var(--tone-4)", "var(--tone-5)"];
   var PENDING_KEY = "letsrun-admin-pending-email";
+  var RANGE_KEY = "letsrun-admin-range";
+  var RANGES = [7, 30, 90];
+  // The last range picked on "מבט על" (this browser only; any storage failure just means 30).
+  function readRange() {
+    var n = 30;
+    try { n = Number(window.localStorage.getItem(RANGE_KEY)) || 30; } catch (e) { /* none */ }
+    return RANGES.indexOf(n) >= 0 ? n : 30;
+  }
+  function saveRange(n) {
+    try { window.localStorage.setItem(RANGE_KEY, String(n)); } catch (e) { /* none */ }
+  }
 
   var sb = null;
   var state = {
     email: "",
-    tab: "reports",
+    tab: "overview",
+    range: readRange(),
     filter: "open",
     openReports: [],
     listReports: [],
@@ -420,9 +432,10 @@
     var m = location.hash.match(/^#(report|user)\/([0-9a-f-]{36})$/i);
     if (m && m[1] === "report") { setTab("reports"); return renderOneReport(m[2]); }
     if (m && m[1] === "user") { setTab(""); return renderUser(m[2]); }
-    var tab = (location.hash || "#reports").slice(1);
-    if (["reports", "flags", "words", "log", "settings"].indexOf(tab) < 0) tab = "reports";
+    var tab = (location.hash || "#overview").slice(1);
+    if (["overview", "reports", "flags", "words", "log", "settings"].indexOf(tab) < 0) tab = "overview";
     setTab(tab);
+    if (tab === "overview") return renderOverview();
     if (tab === "reports") return renderReports();
     if (tab === "flags") return renderFlags();
     if (tab === "words") return renderWords();
@@ -891,6 +904,432 @@
 
       show(limitsForm, versionsForm);
     }).catch(fail);
+  }
+
+  // ------------------------------------------------------------------ overview (מבט על, v27) ---
+  // Counts only, no people: admin_overview(days), admin_health(), admin_metrics(days). Each part loads on its own and
+  // shows its own skeleton, empty state or retry. Before v27 is applied the RPCs are missing: one calm note instead.
+
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  var CRON_NAMES = {
+    "lets-run-push-sweep": "שליחת התראות",
+    "lets-run-push-reminders": "תזכורות לריצות",
+    "lets-run-moderation-sweep": "מיילים על דיווחים",
+    "lets-run-daily": "ניקוי וסיכום יומי"
+  };
+  var ov = { token: 0, ui: null, healthAt: null, ticker: null, missing: false };
+
+  // "1,240" / "4.2" / "—".
+  function fmt(n, digits) {
+    if (n === null || n === undefined || n === "" || isNaN(Number(n))) return "—";
+    return Number(n).toLocaleString("en-US", { maximumFractionDigits: digits === undefined ? 0 : digits });
+  }
+  function num(n, digits, cls) { return h("span", { class: "num" + (cls ? " " + cls : ""), dir: "ltr", text: fmt(n, digits) }); }
+  // "16.9" from "2026-09-16".
+  function shortDay(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || "");
+    return m ? Number(m[3]) + "." + Number(m[2]) : "";
+  }
+  // A week from its first day: "13–19.9" or "28.9–4.10".
+  function weekLabel(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || "");
+    if (!m) return "";
+    var a = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    var b = new Date(a.getTime() + 6 * DAY);
+    var am = a.getUTCMonth() + 1, bm = b.getUTCMonth() + 1;
+    return am === bm ? a.getUTCDate() + "–" + b.getUTCDate() + "." + bm : a.getUTCDate() + "." + am + "–" + b.getUTCDate() + "." + bm;
+  }
+  // 1500 s → "25 דק׳", 7200 → "שעתיים", 259200 → "3 ימים".
+  function duration(s) {
+    s = Number(s);
+    if (!isFinite(s) || s < 60) return "פחות מדקה";
+    if (s < 3600) return Math.round(s / 60) + " דק׳";
+    var hrs = Math.round(s / 3600);
+    if (s < 86400) return hrs === 1 ? "שעה" : hrs === 2 ? "שעתיים" : hrs + " שעות";
+    var d = Math.round(s / 86400);
+    return d === 1 ? "יום" : d === 2 ? "יומיים" : d + " ימים";
+  }
+  function plural(n, one, many) { return Number(n) === 1 ? one : fmt(n) + " " + many; }
+  // { value, status } items from admin_health.
+  function val(item) { return item && typeof item === "object" && item.value !== undefined ? item.value : null; }
+  function worst(group) {
+    if (!group || typeof group !== "object") return "na";
+    var warn = Object.keys(group).some(function (k) { return group[k] && group[k].status === "warn"; });
+    return warn ? "warn" : "ok";
+  }
+  function missingRpc(e) {
+    if (!e) return false;
+    if (e.code === "PGRST202" || e.code === "42883") return true;
+    var m = String(e.message || "") + " " + String(e.details || "") + " " + String(e.hint || "");
+    return /could not find the function|schema cache|function [^ ]+ does not exist/i.test(m);
+  }
+
+  function skeleton(text, cls) {
+    return h("div", { class: "skel" + (cls ? " " + cls : ""), "aria-busy": "true" },
+      h("span", { class: "dot", "aria-hidden": "true" }), h("span", { text: text }));
+  }
+  function retryBox(text, again) {
+    return h("div", { class: "ov-error", role: "alert" },
+      h("span", { text: text }),
+      h("button", { type: "button", class: "btn quiet", onclick: again }, "לנסות שוב"));
+  }
+  function emptyNote(text) {
+    return h("div", { class: "ov-empty" }, svg("M4 19h16M7 15v-3M12 15V8M17 15v-5"), h("b", { text: "עוד אין מספיק נתונים" }),
+      text ? h("span", { text: text }) : null);
+  }
+  function fill(el) {
+    el.textContent = "";
+    for (var i = 1; i < arguments.length; i++) append(el, arguments[i]);
+    el.removeAttribute("aria-busy");
+  }
+
+  // Runs an RPC for the overview; resolves { ok, data } or { ok: false, error } (never rejects).
+  function ovCall(name, args) {
+    return rpc(name, args).then(function (d) { return { ok: true, data: d }; }, function (e) { return { ok: false, error: e }; });
+  }
+  // false when the result should not be drawn (another tab, a newer load, or an access / version problem handled here).
+  function ovUsable(token, res) {
+    if (token !== ov.token || state.tab !== "overview" || ov.missing) return false;
+    if (res.ok) return true;
+    var c = code(res.error);
+    if (missingRpc(res.error)) { ov.missing = true; showNotYet(); return false; }
+    if (c === "not_admin" || c === "not_authenticated" || c === "session") { ov.token++; fail(res.error); return false; }
+    return true;
+  }
+
+  function showNotYet() {
+    stopTicker();
+    show(h("div", { class: "card empty" }, svg("M12 8v4M12 16h.01M12 3a9 9 0 100 18 9 9 0 000-18z"),
+      h("b", { text: "השרת עוד לא עודכן לגרסה הזו" }),
+      h("span", { text: "״מבט על״ יופיע אחרי שעדכון v27 יורץ ב־Supabase. שאר הלשוניות עובדות כרגיל." })));
+  }
+
+  function renderOverview() {
+    ov.token++;
+    ov.missing = false;
+    ov.healthAt = null;
+    var ui = ov.ui = {
+      status: h("section", { class: "ov-status", "aria-live": "polite" }),
+      range: h("div", { class: "filters", role: "group", "aria-label": "טווח ימים" }),
+      countsTitle: h("h2", { class: "ov-label", id: "ov-counts" }),
+      counts: h("section", { class: "ov-grid", "aria-labelledby": "ov-counts" }),
+      chart: h("section", { class: "card ov-chart", "aria-labelledby": "ov-chart-title" }),
+      health: h("section", { class: "list ov-health", "aria-labelledby": "ov-health-title" }),
+      retention: h("section", { class: "card ov-ret", "aria-labelledby": "ov-ret-title" })
+    };
+    show(ui.status, ui.range, ui.countsTitle, ui.counts, ui.chart,
+      h("h2", { class: "ov-label", id: "ov-health-title", text: "האם הכל עובד (24 שעות אחרונות)" }), ui.health,
+      ui.retention);
+    drawRange();
+    loadHealth();
+    loadRange();
+  }
+
+  function drawRange() {
+    var ui = ov.ui;
+    ui.range.textContent = "";
+    RANGES.forEach(function (n) {
+      ui.range.appendChild(h("button", {
+        type: "button",
+        "aria-pressed": state.range === n ? "true" : "false",
+        onclick: function () {
+          if (state.range === n) return;
+          state.range = n;
+          saveRange(n);
+          drawRange();
+          loadRange();
+        }
+      }, h("span", { class: "num", dir: "ltr", text: String(n) }), " ימים"));
+    });
+    ui.countsTitle.textContent = "כמה · " + state.range + " ימים אחרונים";
+  }
+
+  // ---- status line + "האם הכל עובד" (admin_health)
+
+  function stopTicker() { if (ov.ticker) { clearInterval(ov.ticker); ov.ticker = null; } }
+  function updatedText() {
+    if (!ov.healthAt) return "";
+    var ms = Date.now() - ov.healthAt;
+    if (ms < MIN) return "עודכן עכשיו";
+    if (ms < HOUR) return "עודכן לפני " + Math.round(ms / MIN) + " דק׳";
+    return "עודכן " + ago(new Date(ov.healthAt).toISOString());
+  }
+
+  function loadHealth() {
+    var ui = ov.ui, token = ov.token;
+    stopTicker();
+    fill(ui.status, h("span", { class: "ov-dot na", "aria-hidden": "true" }),
+      h("span", { class: "ov-status-text" }, h("b", { text: "בודקים שהכל עובד…" }), h("span", { text: "Push, מיילים, משימות ודיווחים" })));
+    ui.status.className = "ov-status loading";
+    ui.health.setAttribute("aria-busy", "true");
+    ui.health.textContent = "";
+    ui.health.appendChild(skeleton("עוברים על Push, מיילים ומשימות…", "rows"));
+    ovCall("admin_health").then(function (res) {
+      if (!ovUsable(token, res)) return;
+      if (!res.ok) {
+        ui.status.className = "ov-status";
+        fill(ui.status, h("span", { class: "ov-status-text" }, h("b", { text: "לא הצלחנו לבדוק" }), h("span", { text: "בדקו את החיבור ונסו שוב." })),
+          refreshButton());
+        fill(ui.health, retryBox("לא הצלחנו לטעון את הבדיקות.", loadHealth));
+        return;
+      }
+      ov.healthAt = Date.now();
+      drawHealth(res.data || {});
+    });
+  }
+
+  function refreshButton() {
+    return h("button", { type: "button", class: "ov-refresh", "aria-label": "רענון", onclick: function () {
+      ov.token++;
+      loadHealth();
+      loadRange();
+    } }, svg("M20 11a8 8 0 10-2.3 5.7M20 4v7h-7"));
+  }
+
+  function healthRows(d) {
+    var push = d.push || {}, mail = d.mail || {}, mod = d.moderation || {}, photo = d.photo_checks || {};
+    var rows = [];
+
+    // Push: success rate of the last 24 hours.
+    var sent = Number(val(push.sent_24h)) || 0, failed = Number(val(push.failed_24h)) || 0;
+    var expired = Number(val(push.expired_24h)) || 0, pending = Number(val(push.pending)) || 0;
+    var pushBits = [];
+    pushBits.push(pending ? plural(pending, "אחת ממתינה", "ממתינות") +
+      (val(push.oldest_pending_age_s) !== null ? ", הוותיקה לפני " + duration(val(push.oldest_pending_age_s)) : "") : "אין ממתינות");
+    pushBits.push(fmt(sent) + " נשלחו");
+    if (failed) pushBits.push(fmt(failed) + " נכשלו");
+    if (expired) pushBits.push(plural(expired, "מכשיר אחד לא בתוקף", "מכשירים לא בתוקף"));
+    rows.push({ title: "התראות Push", detail: pushBits.join(" · "), status: worst(push),
+      value: sent + failed ? Math.round((sent / (sent + failed)) * 100) + "%" : "—" });
+
+    // Report mails (moderation-mail).
+    var mPending = Number(val(mail.pending)) || 0, mFailed = Number(val(mail.failed_24h)) || 0;
+    var mailBits = [mPending ? plural(mPending, "אחד ממתין", "ממתינים") +
+      (val(mail.oldest_pending_age_s) !== null ? ", הוותיק לפני " + duration(val(mail.oldest_pending_age_s)) : "") : "אין ממתינים"];
+    if (mFailed) mailBits.push(fmt(mFailed) + " נכשלו");
+    rows.push({ title: "מיילים על דיווחים", detail: mailBits.join(" · "), status: worst(mail), value: fmt(mPending) });
+
+    // Scheduled jobs (pg_cron).
+    if (!d.cron || typeof d.cron !== "object") {
+      rows.push({ title: "משימות מתוזמנות", detail: "אי אפשר לקרוא את היסטוריית המשימות", status: "na", value: "—" });
+    } else {
+      var jobs = Object.keys(d.cron);
+      var late = jobs.filter(function (k) { return d.cron[k] && d.cron[k].status === "warn"; });
+      var detail = !jobs.length ? "לא נמצאו משימות"
+        : !late.length ? "כל המשימות רצו בזמן"
+        : late.map(function (k) {
+          var j = d.cron[k] || {};
+          return (CRON_NAMES[k] || k) + (j.last_success ? ": לא רצה " + duration(j.age_s) : ": עוד לא רצה");
+        }).join(" · ");
+      rows.push({ title: "משימות מתוזמנות", detail: detail, status: !jobs.length ? "na" : late.length ? "warn" : "ok",
+        value: (jobs.length - late.length) + "/" + jobs.length });
+    }
+
+    // Open reports and flags.
+    var open = Number(val(mod.open_reports)) || 0, flagsOpen = Number(val(mod.flags_open)) || 0;
+    var modBits = [open ? "הוותיק פתוח " + duration(val(mod.oldest_open_report_age_s)) : "אין דיווחים פתוחים"];
+    if (flagsOpen) modBits.push(plural(flagsOpen, "סימון אחד", "סימונים"));
+    if (Number(val(mod.suspensions_7d))) modBits.push(plural(val(mod.suspensions_7d), "השעיה אחת השבוע", "השעיות השבוע"));
+    rows.push({ title: "דיווחים פתוחים", detail: modBits.join(" · "), status: worst(mod), value: fmt(open) });
+
+    // Photo checks.
+    var total = val(photo.total_24h), rejected = Number(val(photo.rejected_24h)) || 0, errs = Number(val(photo.error_24h)) || 0;
+    var photoBits = [fmt(total) + " נבדקו", fmt(rejected) + " נדחו"];
+    if (errs) photoBits.push(plural(errs, "שגיאה אחת", "שגיאות"));
+    rows.push({ title: "בדיקות תמונה", detail: photoBits.join(" · "), status: worst(photo), value: fmt(total) });
+
+    // Rate limits: refusals are not counted on the server (a refusal rolls back its own write).
+    rows.push({ title: "מגבלות קצב", detail: "השרת לא סופר חסימות. המגבלות עצמן בלשונית הגדרות.", status: "na", value: "—" });
+    return rows;
+  }
+
+  function statusMark(status) {
+    var glyph = status === "ok" ? "M6 12.5l4 4 8-9" : status === "warn" ? "M12 6v7M12 17.5v.5" : "M7 12h10";
+    return h("span", { class: "ov-dot " + status, "aria-hidden": "true" }, svg(glyph));
+  }
+  var STATUS_TEXT = { ok: "תקין", warn: "לבדיקה", na: "לא נמדד" };
+
+  function drawHealth(d) {
+    var ui = ov.ui;
+    var rows = healthRows(d);
+    var warnCount = rows.filter(function (r) { return r.status === "warn"; }).length;
+    var warn = warnCount > 0 || d.status === "warn";
+    var title = !warn ? "הכל עובד כשורה"
+      : warnCount <= 1 ? (warnCount === 1 ? "דבר אחד דורש בדיקה" : "משהו דורש בדיקה")
+      : warnCount + " דברים דורשים בדיקה";
+    var when = h("span", { class: "ov-updated", text: updatedText() });
+    ui.status.className = "ov-status " + (warn ? "warn" : "ok");
+    fill(ui.status, statusMark(warn ? "warn" : "ok"),
+      h("span", { class: "ov-status-text" }, h("b", { text: title }), when),
+      refreshButton());
+    ov.ticker = setInterval(function () {
+      if (!document.body.contains(when)) return stopTicker();
+      when.textContent = updatedText();
+    }, 30000);
+
+    fill(ui.health, rows.map(function (r) {
+      return h("div", { class: "list-row ov-row" },
+        statusMark(r.status),
+        h("span", { class: "grow" },
+          h("span", { class: "ov-row-title" }, r.title, h("span", { class: "sr-only", text: ": " + STATUS_TEXT[r.status] + "." })),
+          h("span", { class: "ov-row-detail", text: r.detail })),
+        h("span", { class: "num ov-row-value", dir: "ltr", text: r.value }));
+    }));
+  }
+
+  // ---- counts, chart, retention (admin_overview + admin_metrics, by range)
+
+  function loadRange() {
+    var ui = ov.ui, token = ov.token, days = state.range;
+    ui.counts.setAttribute("aria-busy", "true");
+    ui.counts.textContent = "";
+    for (var i = 0; i < 6; i++) ui.counts.appendChild(h("div", { class: "ov-card skel-card", "aria-hidden": "true" }));
+    ui.counts.appendChild(h("p", { class: "sr-only", text: "סופרים משתמשים וריצות…" }));
+    fill(ui.chart, skeleton("מציירים את הגרף…", "chart"));
+    ui.chart.setAttribute("aria-busy", "true");
+    fill(ui.retention, skeleton("מחשבים מי חזר…", "table"));
+    ui.retention.setAttribute("aria-busy", "true");
+
+    ovCall("admin_overview", { days: days }).then(function (res) {
+      if (!ovUsable(token, res) || days !== state.range) return;
+      if (!res.ok) {
+        fill(ui.counts, retryBox("לא הצלחנו לטעון את המספרים.", retryRange));
+        fill(ui.chart, h("h2", { class: "ov-card-title", id: "ov-chart-title", text: "ריצות לפי יום" }),
+          retryBox("לא הצלחנו לטעון את הגרף.", retryRange));
+        return;
+      }
+      drawCounts(res.data || {});
+      drawChart(res.data || {});
+    });
+    ovCall("admin_metrics", { days: days }).then(function (res) {
+      if (!ovUsable(token, res) || days !== state.range) return;
+      if (!res.ok) {
+        fill(ui.retention, h("h2", { class: "ov-card-title", id: "ov-ret-title", text: "חוזרים אחרי (לפי שבוע הרשמה)" }),
+          retryBox("לא הצלחנו לטעון את הטבלה.", retryRange));
+        return;
+      }
+      drawRetention(res.data || {});
+    });
+  }
+  function retryRange() { ov.token++; loadHealthIfFailed(); loadRange(); }
+  function loadHealthIfFailed() { if (!ov.healthAt) loadHealth(); }
+
+  function countCard(label, value, digits, sub) {
+    return h("div", { class: "ov-card" },
+      h("span", { class: "ov-card-label", text: label }),
+      num(value, digits, "ov-card-value"),
+      h("span", { class: "ov-card-sub" }, sub));
+  }
+
+  function drawCounts(d) {
+    var u = d.users || {}, r = d.runs || {}, a = d.activity || {};
+    var avg = r.avg_participants_in_range;
+    fill(ov.ui.counts,
+      countCard("משתמשים", u.total, 0, ["+", num(u.new_in_range), " חדשים בטווח"]),
+      countCard("פעילים היום", u.active_today, 0, [num(u.active_7d), " השבוע"]),
+      countCard("ריצות קרובות", r.upcoming_total, 0, [num(r.today), " מהן היום"]),
+      countCard("ריצות שקרו", r.happened_in_range, 0,
+        avg === null || avg === undefined ? "עם משתתפים, בטווח" : ["בממוצע ", num(avg, 1), " משתתפים"]),
+      countCard("הצטרפויות", a.joins_in_range, 0,
+        Number(a.join_requests_pending) === 1 ? "בקשה אחת ממתינה" : [num(a.join_requests_pending), " בקשות ממתינות"]),
+      countCard("ק״מ שהוקלטו", a.total_km_in_range, 1, [num(a.recorded_runs_in_range), " ריצות מוקלטות"]));
+  }
+
+  // Per-day bars, two series side by side. Right to left: the oldest day on the right, today on the left.
+  // The contract's daily series has no "happened" count yet: a future runs_happened field is used when present,
+  // otherwise the phone-recorded runs of that day.
+  function drawChart(d) {
+    var ui = ov.ui;
+    var series = Array.isArray(d.series) ? d.series : [];
+    var hasHappened = series.some(function (s) { return s && s.runs_happened !== undefined; });
+    var keyB = hasHappened ? "runs_happened" : "recorded_runs";
+    var labelA = "נוצרו", labelB = hasHappened ? "קרו עם משתתפים" : "הוקלטו בטלפון";
+    var title = h("h2", { class: "ov-card-title", id: "ov-chart-title", text: hasHappened ? "ריצות שנוצרו מול ריצות שקרו, לפי יום" : "ריצות שנוצרו מול ריצות שהוקלטו, לפי יום" });
+    var A = series.map(function (s) { return Number(s && s.runs_created) || 0; });
+    var B = series.map(function (s) { return Number(s && s[keyB]) || 0; });
+    var max = Math.max.apply(null, A.concat(B, [0]));
+    if (!series.length || max === 0) {
+      return fill(ui.chart, title, emptyNote("כשייווצרו ריצות בטווח הזה, הן יופיעו כאן לפי יום."));
+    }
+
+    var n = series.length, W = 600, H = 120, slot = W / n;
+    var gap = Math.max(slot * 0.18, 0.6), bw = (slot - gap) / 2;
+    var s = document.createElementNS(SVG_NS, "svg");
+    s.setAttribute("viewBox", "0 0 " + W + " " + H);
+    s.setAttribute("preserveAspectRatio", "none");
+    s.setAttribute("class", "ov-bars");
+    s.setAttribute("role", "img");
+    var sumA = A.reduce(function (x, y) { return x + y; }, 0), sumB = B.reduce(function (x, y) { return x + y; }, 0);
+    var peak = A.indexOf(Math.max.apply(null, A));
+    s.setAttribute("aria-label", "גרף עמודות, " + n + " ימים: " + labelA + " " + sumA + " ריצות, " + labelB + " " + sumB +
+      ". הכי הרבה ריצות נוצרו ב־" + shortDay(series[peak].day) + " (" + A[peak] + "). הפירוט בטבלה שאחרי הגרף.");
+    var grid = document.createElementNS(SVG_NS, "line");
+    grid.setAttribute("x1", "0"); grid.setAttribute("x2", String(W)); grid.setAttribute("y1", "0.5"); grid.setAttribute("y2", "0.5");
+    grid.setAttribute("class", "ov-grid-line");
+    s.appendChild(grid);
+    var rect = function (x, v, cls) {
+      if (!v) return;
+      var hgt = Math.max((v / max) * (H - 2), 1.5);
+      var r = document.createElementNS(SVG_NS, "rect");
+      r.setAttribute("x", x.toFixed(2)); r.setAttribute("width", bw.toFixed(2));
+      r.setAttribute("y", (H - hgt).toFixed(2)); r.setAttribute("height", hgt.toFixed(2));
+      r.setAttribute("class", cls);
+      s.appendChild(r);
+    };
+    for (var i = 0; i < n; i++) {
+      var right = W - i * slot - gap / 2;
+      rect(right - bw, A[i], "bar-a");
+      rect(right - 2 * bw, B[i], "bar-b");
+    }
+
+    var table = h("table", { class: "sr-only" },
+      h("caption", { text: title.textContent }),
+      h("thead", null, h("tr", null, h("th", { scope: "col", text: "יום" }), h("th", { scope: "col", text: labelA }),
+        h("th", { scope: "col", text: labelB }))),
+      h("tbody", null, series.map(function (row, k) {
+        return h("tr", null, h("th", { scope: "row", text: shortDay(row.day) }), h("td", { text: String(A[k]) }), h("td", { text: String(B[k]) }));
+      })));
+
+    fill(ui.chart, title,
+      h("div", { class: "ov-plot" },
+        h("span", { class: "ov-max", "aria-hidden": "true" }, num(max)),
+        s,
+        h("div", { class: "ov-axis", "aria-hidden": "true" },
+          h("span", { class: "num", dir: "ltr", text: shortDay(series[0].day) }),
+          h("span", { text: "היום" }))),
+      h("div", { class: "ov-legend", "aria-hidden": "true" },
+        h("span", null, h("i", { class: "key-a" }), labelA),
+        h("span", null, h("i", { class: "key-b" }), labelB)),
+      table);
+  }
+
+  function drawRetention(d) {
+    var ui = ov.ui;
+    var title = h("h2", { class: "ov-card-title", id: "ov-ret-title", text: "חוזרים אחרי (לפי שבוע הרשמה)" });
+    var rows = (Array.isArray(d.retention) ? d.retention : []).filter(function (r) { return r && Number(r.users) > 0; }).reverse();
+    var opted = Number(d.opted_out) || 0;
+    var foot = h("p", { class: "note" }, opted
+      ? [num(opted), opted === 1 ? " משתמש/ת כיבה את שיתוף נתוני השימוש ולא נספר/ת כאן." : " משתמשים כיבו את שיתוף נתוני השימוש ולא נספרים כאן."]
+      : "כל המשתמשים משתפים נתוני שימוש.");
+    if (!rows.length) return fill(ui.retention, title, emptyNote("הטבלה תתמלא כשיהיו הרשמות בטווח הזה."), foot);
+    var cell = function (c) {
+      var rate = c && c.rate !== null && c.rate !== undefined ? Number(c.rate) : null;
+      if (rate === null || isNaN(rate)) {
+        return h("td", { class: "na" }, h("span", { "aria-hidden": "true", text: "—" }), h("span", { class: "sr-only", text: "עוד אי אפשר למדוד" }));
+      }
+      return h("td", null, h("span", { class: "num", dir: "ltr", text: Math.round(rate * 100) + "%" }));
+    };
+    fill(ui.retention, title,
+      h("table", { class: "ov-table" },
+        h("thead", null, h("tr", null, ["שבוע", "יום 1", "יום 7", "יום 30"].map(function (t) { return h("th", { scope: "col", text: t }); }))),
+        h("tbody", null, rows.map(function (r) {
+          return h("tr", null,
+            h("th", { scope: "row" }, h("span", { class: "num", dir: "ltr", text: weekLabel(r.week) }),
+              h("small", null, num(r.users), r.users === 1 ? " נרשם/ה" : " נרשמו")),
+            cell(r.d1), cell(r.d7), cell(r.d30));
+        }))),
+      h("p", { class: "note", text: "חזרו = היו פעילים באפליקציה ביום הזה או למחרת. ״—״ = עוד מוקדם למדוד." }),
+      foot);
   }
 
   // ------------------------------------------------------------------ user page ---

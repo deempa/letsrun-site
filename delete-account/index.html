@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>מחיקת חשבון · בוא נרוץ</title>
+<meta name="description" content="איך מוחקים חשבון בבוא נרוץ, מתוך האפליקציה או במייל, מה נמחק ומה נשמר ולכמה זמן.">
+<link rel="canonical" href="https://letsrun.co.il/delete-account/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<!-- Draft for the owner to review (Google Play "Delete account URL"). Not legal advice.
+     Before publishing, replace every bracketed placeholder (docs/store/README.md Q-D2–Q-D5, Q-L4):
+       [Lior Rabanian]   developer name exactly as on the Play listing (Q-L4)
+       P1 [N] backups     Supabase backup retention on the chosen plan (Q-D2)
+       P2 [N] moderation  how long moderation_log rows are kept; today there is no purge job, so either add one or
+                          change the wording (Q-D3)
+       P3 [N] mailbox     how long report emails / deletion requests are kept in the team's mailbox (Q-D3)
+       P4 [N] events      usage-event retention once round 25 events ship (spec: 90 days; Q-D5)
+       P5 30 days         deletion by email "as soon as possible, and within 30 days at the latest" (Q-D4) -->
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="mark" aria-hidden="true"></span>בוא נרוץ</a>
+    <nav class="nav" aria-label="ניווט ראשי"><a class="nav-link" href="../privacy/">מדיניות פרטיות</a><a class="btn small" href="../index.html">לאתר</a></nav>
+  </div>
+</header>
+<main class="article">
+  <div class="wrap">
+    <p class="eyebrow">בוא נרוץ</p>
+    <h1>מחיקת חשבון</h1>
+    <p class="meta">האפליקציה "בוא נרוץ" · מפתח: <span dir="ltr">deempa</span> · עודכן ב־<span class="num">15</span> באוקטובר <span class="num">2026</span></p>
+    <div class="body">
+      <div class="callout">
+        <p><b>בקצרה.</b> מוחקים את החשבון מתוך האפליקציה, בהגדרות. המחיקה מיידית ולצמיתות, באייפון ובאנדרואיד. אין
+          גישה לאפליקציה, או שהחשבון מושעה? כתבו לנו במייל ונמחק אותו בשבילכם.</p>
+      </div>
+
+      <h2 id="in-app">מחיקה מתוך האפליקציה</h2>
+      <p>אותם צעדים באייפון ובאנדרואיד:</p>
+      <ol>
+        <li>פותחים את האפליקציה ונכנסים ללשונית <b>פרופיל</b>.</li>
+        <li>לוחצים על סמל ההגדרות (גלגל השיניים) בראש המסך.</li>
+        <li>בחלק <b>חשבון</b> לוחצים על <b>מחיקת חשבון</b>.</li>
+        <li>מאשרים בלחיצה על <b>מחיקה לצמיתות</b>.</li>
+      </ol>
+      <p>החשבון נמחק מיד, והאפליקציה חוזרת למסך הכניסה. אי אפשר לשחזר חשבון שנמחק.</p>
+
+      <h2 id="by-email">מחיקה במייל</h2>
+      <p>אם אין לכם גישה לאפליקציה, או שהחשבון מושעה (חשבון מושעה לא יכול למחוק את עצמו מתוך האפליקציה), שלחו לנו
+        <a href="mailto:masrab11@gmail.com?subject=%D7%91%D7%A7%D7%A9%D7%AA%20%D7%9E%D7%97%D7%99%D7%A7%D7%AA%20%D7%97%D7%A9%D7%91%D7%95%D7%9F&amp;body=%D7%A9%D7%9C%D7%95%D7%9D%2C%0A%D7%90%D7%A0%D7%99%20%D7%9E%D7%91%D7%A7%D7%A9/%D7%AA%20%D7%9C%D7%9E%D7%97%D7%95%D7%A7%20%D7%90%D7%AA%20%D7%94%D7%97%D7%A9%D7%91%D7%95%D7%9F%20%D7%A9%D7%9C%D7%99%20%D7%91%D7%90%D7%A4%D7%9C%D7%99%D7%A7%D7%A6%D7%99%D7%94%20%D7%91%D7%95%D7%90%20%D7%A0%D7%A8%D7%95%D7%A5.%0A%0A%D7%9B%D7%AA%D7%95%D7%91%D7%AA%20%D7%94%D7%9E%D7%99%D7%99%D7%9C%20%D7%A9%D7%9C%20%D7%94%D7%97%D7%A9%D7%91%D7%95%D7%9F%20%28%D7%97%D7%A9%D7%91%D7%95%D7%9F%20Google%29%3A%0A%D7%90%D7%95%2C%20%D7%90%D7%9D%20%D7%A0%D7%9B%D7%A0%D7%A1%D7%AA%D7%99%20%D7%A2%D7%9D%20Apple%3A%20%D7%94%D7%A9%D7%9D%20%D7%94%D7%A4%D7%A8%D7%98%D7%99%20%D7%95%D7%A9%D7%A0%D7%AA%20%D7%94%D7%9C%D7%99%D7%93%D7%94%20%D7%A9%D7%91%D7%A4%D7%A8%D7%95%D7%A4%D7%99%D7%9C%3A%0A%0A%D7%AA%D7%95%D7%93%D7%94">מייל
+        עם הנושא "בקשת מחיקת חשבון"</a> לכתובת <a href="mailto:masrab11@gmail.com"><span dir="ltr">masrab11@gmail.com</span></a>.</p>
+      <ul>
+        <li><b>נכנסתם עם Google?</b> כתבו את כתובת המייל של חשבון ה־Google, ועדיף לשלוח ממנה.</li>
+        <li><b>נכנסתם עם Apple?</b> לרוב אין לנו את כתובת המייל שלכם. כתבו את השם הפרטי ואת שנת הלידה שבפרופיל.</li>
+      </ul>
+      <p>נמחק את החשבון בהקדם, ולכל המאוחר תוך <span class="num">30</span> יום, ונאשר לכם במייל. המחיקה במייל מוחקת את
+        אותו מידע כמו המחיקה מתוך האפליקציה. אם לא נצליח לזהות את החשבון לפי הפרטים, נשאל אתכם שוב לפני שנמחק משהו.</p>
+
+      <h2 id="deleted">מה נמחק לצמיתות</h2>
+      <ul>
+        <li><b>הפרופיל:</b> שם, שנת לידה, תיאור, שכונה, העדפות ריצה, זמינות, תחרויות ואישור תנאי השימוש.</li>
+        <li><b>התמונות:</b> תמונת הפרופיל ותמונות הכיסוי של ריצות שפתחתם.</li>
+        <li><b>המיקום המשוער</b> שנשמר בחשבון.</li>
+        <li><b>ריצות קבוצתיות שפתחתם</b>, כולל הצ׳אט שלהן, וההצטרפויות, הבקשות וההזמנות שלכם לריצות של אחרים.</li>
+        <li><b>ההודעות שכתבתם</b> בצ׳אטים של ריצות.</li>
+        <li><b>החיבורים</b> עם רצים אחרים, בשני הכיוונים, וקישור ההזמנה האישי.</li>
+        <li><b>הריצות האישיות</b> שתיעדתם או ייבאתם, כולל מסלולים ודופק.</li>
+        <li><b>משוב אחרי ריצה</b>, החסימות והדיווחים שלכם, דיווחים עליכם ורמת האמון.</li>
+        <li><b>מזהי ההתראות</b> (Push) של המכשירים שלכם והעדפות ההתראה.</li>
+        <li><b>נתוני שימוש</b> (פעולות באפליקציה, בלי טקסט ובלי מיקום) מנותקים מהחשבון ונשארים אנונימיים בלבד, עד
+          שהם נמחקים אחרי <span class="num">400</span> ימים.</li>
+      </ul>
+
+      <h2 id="kept">מה נשמר, ולכמה זמן</h2>
+      <ul>
+        <li><b>יומן הפעולות של הצוות.</b> אם הצוות פעל בנוגע לחשבון (למשל השעיה והסיבה לה, או הסרה של הודעה או ריצה
+          שהפרו את הכללים, כולל התוכן שהוסר), הרשומה נשמרת עם מזהה פנימי של החשבון, בלי הפרופיל. היא נדרשת לטיפול
+          בערעורים, למניעת שימוש חוזר לרעה ולמילוי חובות לפי דין. נשמרת עד <span class="num">90</span> ימים מהמחיקה.</li>
+        <li><b>מיילים לצוות.</b> מיילים על דיווחים שכבר נשלחו לצוות, ובקשות מחיקה במייל, נשמרים בתיבת המייל של הצוות עד
+          <span class="num">90</span> ימים.</li>
+        <li><b>גיבויים.</b> כרגע איננו שומרים עותקי גיבוי נפרדים של מסד הנתונים, ולכן המידע לא נשאר בגיבוי אחרי המחיקה.</li>
+        <li><b>ריצות ששמרתם ב־Apple Health או ב־Health Connect</b> נשארות במכשיר שלכם, ומוחקים אותן משם.</li>
+      </ul>
+      <p>מחיקת החשבון לא מוחקת את חשבון ה־Apple או ה־Google שאיתו נכנסתם.</p>
+
+      <h2 id="partial">מחיקה חלקית, בלי למחוק את החשבון</h2>
+      <ul>
+        <li>מוחקים ריצה אישית מההיסטוריה, מהעמוד של הריצה.</li>
+        <li>מוחקים ריצה קבוצתית שפתחתם, מהתפריט של הריצה.</li>
+        <li>מכבים את הייבוא מ־Apple Health או מ־Health Connect.</li>
+        <li>לכל מידע אחר, כתבו לנו ל־<a href="mailto:masrab11@gmail.com"><span dir="ltr">masrab11@gmail.com</span></a>.</li>
+      </ul>
+      <p>עוד על המידע שנאסף ואיך הוא נשמר: <a href="../privacy/">מדיניות הפרטיות</a>.</p>
+
+      <section class="body" id="english" lang="en" dir="ltr">
+        <h2>Delete your account (English)</h2>
+        <p>App: <b>בוא נרוץ (Let's Run)</b> · Developer: deempa</p>
+        <p><b>In the app (iPhone and Android):</b> open the <b>פרופיל</b> (Profile) tab → tap the settings (gear) icon →
+          under <b>חשבון</b> (Account) tap <b>מחיקת חשבון</b> (Delete account) → confirm with <b>מחיקה לצמיתות</b>
+          (Delete permanently). The account is deleted immediately and cannot be restored.</p>
+        <p><b>Without the app, or if the account is suspended:</b> email
+          <a href="mailto:masrab11@gmail.com?subject=%D7%91%D7%A7%D7%A9%D7%AA%20%D7%9E%D7%97%D7%99%D7%A7%D7%AA%20%D7%97%D7%A9%D7%91%D7%95%D7%9F&amp;body=Hello%2C%0APlease%20delete%20my%20Let%27s%20Run%20%28%D7%91%D7%95%D7%90%20%D7%A0%D7%A8%D7%95%D7%A5%29%20account.%0A%0AAccount%20email%20%28Google%20sign-in%29%3A%0AOr%2C%20if%20I%20signed%20in%20with%20Apple%2C%20the%20first%20name%20and%20birth%20year%20on%20my%20profile%3A%0A%0AThank%20you">masrab11@gmail.com</a>
+          with the subject "בקשת מחיקת חשבון" (account deletion request) and the account's Google email, or, for Apple
+          sign-in, the first name and birth year on the profile. We delete it as soon as possible, and within 30 days at
+          the latest, and confirm by email.</p>
+        <p><b>Deleted:</b> profile (name, birth year, bio, neighbourhood, preferences, availability, races), profile photo
+          and run cover photos, approximate location, group runs you created with their chats, your joins, requests and
+          invites, your chat messages, connections, personal runs (routes, heart rate), feedback, blocks and reports,
+          trust level, push tokens and notification settings. Usage events are unlinked from the account and kept only
+          anonymously, then deleted after 400 days.</p>
+        <p><b>Kept:</b> the team's moderation log entries about the account (e.g. a suspension and its reason, or content
+          the team removed), stored with an internal account ID and no profile, for appeals, abuse prevention and legal
+          obligations, for up to 90 days; report emails and deletion requests in the team's mailbox for up to 90 days.
+          We do not currently keep separate database backups. Runs you saved to Apple
+          Health or Health Connect stay on your device.</p>
+      </section>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <span>© <span class="num">2026</span> בוא נרוץ</span>
+    <nav aria-label="קישורים"><a href="../privacy/">מדיניות פרטיות</a><a href="../terms/">תנאי שימוש</a><a href="./">מחיקת חשבון</a><a href="../index.html">דף הבית</a></nav>
+  </div>
+</footer>
+</body>
+</html>
