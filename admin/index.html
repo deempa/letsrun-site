@@ -30,6 +30,7 @@
   </div>
   <nav class="tabs" role="tablist" aria-label="מדורים" id="tabs" hidden>
     <button type="button" role="tab" id="tab-overview" aria-controls="view" data-tab="overview">מבט על</button>
+    <button type="button" role="tab" id="tab-users" aria-controls="view" data-tab="users">משתמשים</button>
     <button type="button" role="tab" id="tab-reports" aria-controls="view" data-tab="reports">דיווחים<span class="count" id="count-reports" hidden></span></button>
     <button type="button" role="tab" id="tab-flags" aria-controls="view" data-tab="flags">סימונים<span class="count" id="count-flags" hidden></span></button>
     <button type="button" role="tab" id="tab-words" aria-controls="view" data-tab="words">מילים</button>
@@ -75,6 +76,49 @@
       <button type="button" class="btn text" id="resend">שליחה מחדש</button>
       <button type="button" class="btn text" id="other-email">כתובת אחרת</button>
     </div>
+  </section>
+</template>
+
+<!-- Second step (round 30): a code from an authenticator app. The database refuses admin_* calls without it. -->
+<template id="t-mfa-enroll">
+  <section class="panel signin">
+    <span class="step-label">שלב 2 מתוך 2</span>
+    <h1>עוד מנעול אחד</h1>
+    <p class="muted">כאן רואים מיילים של משתמשים, אז הכניסה צריכה גם קוד מאפליקציית אימות בטלפון (Google Authenticator, 1Password וכדומה).</p>
+    <div class="mfa-setup">
+      <img class="mfa-qr" id="mfa-qr" alt="קוד QR לסריקה באפליקציית האימות" width="140" height="140">
+      <div class="mfa-key">
+        <b>1. סורקים באפליקציה</b>
+        <span class="muted">או מקלידים את המפתח:</span>
+        <code id="mfa-secret" dir="ltr"></code>
+      </div>
+    </div>
+    <form class="stack" id="mfa-enroll-form" novalidate>
+      <label class="field">
+        <span class="label">2. מקלידים את הקוד שמופיע שם</span>
+        <input type="text" id="mfa-enroll-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}"
+               maxlength="6" dir="ltr" class="code-input" required>
+      </label>
+      <button type="submit" class="btn ink">הפעלה וכניסה</button>
+      <p class="form-error" id="mfa-enroll-error" role="alert" hidden></p>
+    </form>
+    <p class="note">טלפון אבד? אפשר לאפס מ־Supabase (מתועד ב־README).</p>
+  </section>
+</template>
+
+<template id="t-mfa">
+  <section class="panel signin">
+    <h1>הקוד מאפליקציית האימות</h1>
+    <p class="muted">אחרי הקוד מהמייל, עוד 6 ספרות מהטלפון.</p>
+    <form class="stack" id="mfa-form" novalidate>
+      <label class="field">
+        <span class="label">קוד אימות</span>
+        <input type="text" id="mfa-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}"
+               maxlength="6" dir="ltr" class="code-input" required>
+      </label>
+      <button type="submit" class="btn ink">כניסה</button>
+      <p class="form-error" id="mfa-error" role="alert" hidden></p>
+    </form>
   </section>
 </template>
 

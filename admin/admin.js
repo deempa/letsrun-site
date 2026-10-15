@@ -27,8 +27,12 @@
     word_added: "מילה נוספה",
     word_removed: "מילה הוסרה",
     rate_limit_set: "מגבלת קצב",
-    app_config_set: "הגדרת גרסה"
+    app_config_set: "הגדרת גרסה",
+    users_viewed: "צפייה ברשימת המשתמשים",
+    newsletter_exported: "ייצוא מנויי הניוזלטר"
   };
+  var SOURCES = { onboarding: "באונבורדינג", settings: "בהגדרות" };
+  var RESEND_URL = "https://resend.com/broadcasts";
   // Rate limit actions (private.rate_limits), in the order the settings tab shows them.
   var LIMITS = [
     ["chat_message", "הודעות בצ׳אט"],
@@ -36,7 +40,10 @@
     ["run_create", "ריצות חדשות"],
     ["connection_request", "בקשות חיבור"],
     ["run_invite", "הזמנות לריצה"],
-    ["report", "דיווחים"]
+    ["report", "דיווחים"],
+    ["location_update", "עדכוני מיקום"],
+    ["link_preview", "פתיחת קישורי חיבור"],
+    ["events", "נתוני שימוש מהאפליקציה"]
   ];
   var CONFIG = {
     min_version_ios: "iOS · גרסה מינימלית",
@@ -205,7 +212,7 @@
   }
   function code(e) {
     var m = (e && (e.message || e.error_description || e.msg)) || String(e || "");
-    var known = ["not_admin", "not_authenticated", "invalid_argument", "user_not_found", "message_not_found",
+    var known = ["mfa_required", "not_admin", "not_authenticated", "invalid_argument", "user_not_found", "message_not_found",
       "group_run_not_found", "report_not_found", "flag_not_found"];
     for (var i = 0; i < known.length; i++) if (m.indexOf(known[i]) >= 0) return known[i];
     if (/jwt|token|session/i.test(m)) return "session";
@@ -227,6 +234,7 @@
   function fail(e) {
     var c = code(e);
     if (c === "not_admin") return showDenied();
+    if (c === "mfa_required") return secondStep();
     if (c === "not_authenticated" || c === "session") {
       toast(errorText({ message: "session" }));
       return signOut();
@@ -319,7 +327,7 @@
     if (button) button.disabled = true;
     sb.auth.signInWithOtp({
       email: email,
-      options: { shouldCreateUser: true, emailRedirectTo: location.origin + location.pathname }
+      options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname }
     }).then(function (res) {
       if (button) button.disabled = false;
       if (res.error) {
@@ -373,6 +381,90 @@
     input.focus();
   }
 
+  // ------------------------------------------------------------------ second step (TOTP) ---
+
+  // The email code gives an aal1 session; admin_* calls need aal2. A verified factor → ask for its code;
+  // none yet → enroll one (an unfinished enrollment from an earlier try is removed first).
+  function secondStep() {
+    $("tabs").hidden = true;
+    $("sign-out").hidden = false;
+    loading("עוד רגע…");
+    sb.auth.mfa.listFactors().then(function (res) {
+      if (res.error) throw res.error;
+      var all = (res.data && res.data.all) || [];
+      var verified = all.filter(function (f) { return f.factor_type === "totp" && f.status === "verified"; });
+      if (verified.length) return showMfa(verified[0].id);
+      var stale = all.filter(function (f) { return f.factor_type === "totp" && f.status !== "verified"; });
+      return Promise.all(stale.map(function (f) { return sb.auth.mfa.unenroll({ factorId: f.id }); })).then(enrollMfa);
+    }).catch(function () {
+      show(empty("לא הצלחנו להמשיך", "אפשר לרענן את הדף ולנסות שוב."));
+    });
+  }
+
+  // The QR comes back as SVG markup (or already as a data URL in newer servers); shown in an <img>, so it can't run.
+  function qrSrc(q) {
+    if (!q) return "";
+    return /^data:/.test(q) ? q : "data:image/svg+xml;utf-8," + encodeURIComponent(q);
+  }
+
+  function sixDigits(input, form) {
+    input.addEventListener("input", function () {
+      input.value = input.value.replace(/\D+/g, "").slice(0, 6);
+      if (input.value.length === 6) form.requestSubmit();
+    });
+  }
+
+  function verifyMfa(factorId, input, err, btn) {
+    var token = input.value.replace(/\D+/g, "");
+    if (token.length !== 6) {
+      err.textContent = "הקוד הוא 6 ספרות.";
+      err.hidden = false;
+      input.focus();
+      return;
+    }
+    btn.disabled = true;
+    sb.auth.mfa.challengeAndVerify({ factorId: factorId, code: token }).then(function (res) {
+      btn.disabled = false;
+      if (res.error) {
+        err.textContent = "הקוד לא נכון. בודקים שהשעה בטלפון מדויקת ומנסים את הקוד הבא.";
+        err.hidden = false;
+        input.select();
+        return;
+      }
+      sb.auth.getSession().then(function (r) { if (r.data && r.data.session) enter(r.data.session); });
+    });
+  }
+
+  function enrollMfa() {
+    return sb.auth.mfa.enroll({ factorType: "totp", friendlyName: "letsrun-admin" }).then(function (res) {
+      if (res.error || !res.data) throw res.error || new Error("enroll");
+      var factorId = res.data.id;
+      show($("t-mfa-enroll").content.cloneNode(true));
+      $("mfa-qr").src = qrSrc(res.data.totp && res.data.totp.qr_code);
+      $("mfa-secret").textContent = ((res.data.totp && res.data.totp.secret) || "").replace(/(.{4})/g, "$1 ").trim();
+      var input = $("mfa-enroll-code");
+      var form = $("mfa-enroll-form");
+      sixDigits(input, form);
+      form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        verifyMfa(factorId, input, $("mfa-enroll-error"), form.querySelector("button[type=submit]"));
+      });
+      input.focus();
+    });
+  }
+
+  function showMfa(factorId) {
+    show($("t-mfa").content.cloneNode(true));
+    var input = $("mfa-code");
+    var form = $("mfa-form");
+    sixDigits(input, form);
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      verifyMfa(factorId, input, $("mfa-error"), form.querySelector("button[type=submit]"));
+    });
+    input.focus();
+  }
+
   function showDenied() {
     $("tabs").hidden = true;
     show($("t-denied").content.cloneNode(true));
@@ -405,6 +497,7 @@
       })
       .catch(function (e) {
         if (code(e) === "not_admin") return showDenied();
+        if (code(e) === "mfa_required") return secondStep();
         fail(e);
         show(empty("לא הצלחנו לטעון", "בדקו את החיבור ונסו לרענן את הדף."));
       });
@@ -433,9 +526,10 @@
     if (m && m[1] === "report") { setTab("reports"); return renderOneReport(m[2]); }
     if (m && m[1] === "user") { setTab(""); return renderUser(m[2]); }
     var tab = (location.hash || "#overview").slice(1);
-    if (["overview", "reports", "flags", "words", "log", "settings"].indexOf(tab) < 0) tab = "overview";
+    if (["overview", "users", "reports", "flags", "words", "log", "settings"].indexOf(tab) < 0) tab = "overview";
     setTab(tab);
     if (tab === "overview") return renderOverview();
+    if (tab === "users") return renderUsers();
     if (tab === "reports") return renderReports();
     if (tab === "flags") return renderFlags();
     if (tab === "words") return renderWords();
@@ -719,6 +813,9 @@
     if (l.action === "rate_limit_set" && l.context) {
       what += " · " + limitLabel(l.context.action) + " " + windowLabel(l.context.per_seconds) + ": " +
         (l.context.previous === null || l.context.previous === undefined ? "—" : l.context.previous) + " ← " + l.context.max_count;
+    }
+    if ((l.action === "users_viewed" || l.action === "newsletter_exported") && l.context && typeof l.context.rows === "number") {
+      what += " · " + l.context.rows + " שורות";
     }
     if (l.action === "app_config_set" && l.context) {
       what += " · " + (CONFIG[l.context.key] || l.context.key) + ": " + configText(l.context.previous) + " ← " + configText(l.context.value);
@@ -1332,6 +1429,151 @@
       foot);
   }
 
+  // ------------------------------------------------------------------ users and newsletter (round 30, M1) ---
+
+  // Every user's email (the server logs each call, counts only). Export covers newsletter subscribers only.
+  var users = { rows: [], done: false, search: "", only: false, token: 0, timer: null };
+
+  function newsletterText(n) {
+    if (!n || !n.subscribed) return "לא מנוי/ה";
+    return ["מנוי/ה", SOURCES[n.source] || "", n.consent_at ? stamp(n.consent_at) : ""].filter(Boolean).join(" · ");
+  }
+  function shortDate(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    if (dayKey(d) === dayKey(new Date())) return "היום";
+    if (dayKey(d) === dayKey(new Date(Date.now() - DAY))) return "אתמול";
+    return d.toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "2-digit", timeZone: "Asia/Jerusalem" });
+  }
+
+  function newsletterCard(s) {
+    var pct = s.users ? Math.round((s.subscribers / s.users) * 100) : 0;
+    var exportBtn = h("button", { type: "button", class: "btn nl-export", onclick: function () { exportSubscribers(exportBtn); } },
+      svg("M12 4v11M7 10l5 5 5-5M5 20h14"), "ייצוא מנויים (CSV)");
+    return h("section", { class: "nl-card", "aria-label": "ניוזלטר" },
+      h("div", { class: "nl-top" },
+        h("div", { class: "nl-main" },
+          h("span", { class: "nl-label", text: "ניוזלטר" }),
+          h("span", { class: "nl-value num", text: s.subscribers.toLocaleString("he-IL") }),
+          h("span", { class: "nl-sub", text: "מנויים מתוך " + s.users.toLocaleString("he-IL") + " משתמשים · " + pct + "%" })),
+        h("div", { class: "nl-side" },
+          h("span", null, h("b", { class: "num", text: "+" + s.subscribed_30d }), " ב־30 יום"),
+          h("span", { text: s.unsubscribed_30d + " הסירו" }))),
+      h("div", { class: "nl-actions" }, exportBtn,
+        h("a", { class: "btn nl-link", href: RESEND_URL, target: "_blank", rel: "noopener noreferrer" }, "שליחה ב־Resend")),
+      h("span", { class: "nl-foot", text: "רשימה מסונכרנת אוטומטית." +
+        (s.apple_relay_subscribers ? " " + s.apple_relay_subscribers + " מהמנויים עם מייל מוסתר של Apple." : "") +
+        (s.outbox_failed ? " " + s.outbox_failed + " עדכונים ל־Resend נכשלו." : "") }));
+  }
+
+  function userRow(u) {
+    return h("button", { type: "button", class: "user-row", onclick: function () { go("#user/" + u.id); } },
+      avatar(u),
+      h("span", { class: "who-text" },
+        h("span", { class: "who-name", text: (u.name && u.name.trim()) || "ללא שם" }),
+        h("span", { class: "user-email", dir: "ltr", text: u.email || "—" })),
+      h("span", { class: "user-side" },
+        u.newsletter ? h("span", { class: "chip sub", text: "מנוי/ה" }) : null,
+        u.suspended ? h("span", { class: "chip suspended", text: "מושעה/ית" }) : null,
+        h("span", { class: "when", text: shortDate(u.created_at) })));
+  }
+
+  function renderUsers() {
+    users.rows = [];
+    users.done = false;
+    var card = h("div", { id: "nl-slot" }, h("p", { class: "loading" }, h("span", { class: "dot", "aria-hidden": "true" }), "טוענים…"));
+    var input = h("input", { type: "search", id: "user-search", placeholder: "חיפוש לפי שם או מייל", "aria-label": "חיפוש לפי שם או מייל",
+      autocomplete: "off", value: users.search });
+    input.addEventListener("input", function () {
+      clearTimeout(users.timer);
+      users.timer = setTimeout(function () { users.search = input.value.trim(); loadUsers(true); }, 400);
+    });
+    var filters = h("div", { class: "filters", role: "group", "aria-label": "סינון" },
+      [["כולם", false], ["מנויים לניוזלטר", true]].map(function (f) {
+        return h("button", { type: "button", "aria-pressed": users.only === f[1] ? "true" : "false", onclick: function (ev) {
+          users.only = f[1];
+          Array.prototype.forEach.call(ev.currentTarget.parentNode.children, function (b) { b.setAttribute("aria-pressed", "false"); });
+          ev.currentTarget.setAttribute("aria-pressed", "true");
+          loadUsers(true);
+        } }, f[0]);
+      }));
+    show(card,
+      h("label", { class: "search" }, svg("M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4-4"), input),
+      filters,
+      h("div", { id: "user-list" }),
+      h("p", { class: "note center", text: "כל צפייה בדף הזה וכל ייצוא נרשמים ביומן." }));
+    rpc("admin_newsletter_summary").then(function (s) {
+      var slot = $("nl-slot");
+      if (!slot) return;
+      slot.textContent = "";
+      slot.appendChild(newsletterCard(s || {}));
+    }).catch(function (e) {
+      var slot = $("nl-slot");
+      if (slot) slot.textContent = "";
+      fail(e);
+    });
+    loadUsers(true);
+  }
+
+  function loadUsers(fresh) {
+    var token = ++users.token;
+    if (fresh) { users.rows = []; users.done = false; }
+    var box = $("user-list");
+    if (!box) return;
+    if (fresh) {
+      box.textContent = "";
+      box.appendChild(h("p", { class: "loading" }, h("span", { class: "dot", "aria-hidden": "true" }), "טוענים משתמשים…"));
+    }
+    var before = users.rows.length ? users.rows[users.rows.length - 1].created_at : null;
+    rpc("admin_users", { search: users.search || null, subscribers_only: users.only, max_rows: 50, before: before }).then(function (rows) {
+      if (token !== users.token || !$("user-list")) return;
+      rows = rows || [];
+      users.rows = users.rows.concat(rows);
+      users.done = rows.length < 50;
+      box.textContent = "";
+      if (!users.rows.length) {
+        box.appendChild(empty(users.search ? "אין תוצאות" : users.only ? "עוד אין מנויים" : "עוד אין משתמשים",
+          users.search ? "אפשר לחפש חלק מהשם או מהמייל." : null));
+        return;
+      }
+      box.appendChild(h("div", { class: "list" }, users.rows.map(userRow)));
+      if (!users.done) box.appendChild(h("button", { type: "button", class: "btn quiet", onclick: function () { loadUsers(false); } }, "עוד"));
+    }).catch(function (e) {
+      if (token !== users.token) return;
+      box.textContent = "";
+      fail(e);
+    });
+  }
+
+  // A cell that Excel or Sheets would read as a formula gets a leading apostrophe.
+  function csvCell(v) {
+    var t = v === null || v === undefined ? "" : String(v);
+    if (/^[=+\-@\t\r]/.test(t)) t = "'" + t;
+    return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+  }
+
+  function exportSubscribers(btn) {
+    btn.disabled = true;
+    rpc("admin_newsletter_export").then(function (rows) {
+      btn.disabled = false;
+      rows = rows || [];
+      if (!rows.length) return toast("עוד אין מנויים לייצוא");
+      var lines = [["email", "first_name", "consent_at", "consent_source"].join(",")].concat(rows.map(function (r) {
+        return [r.email, r.first_name, r.consent_at, r.consent_source].map(csvCell).join(",");
+      }));
+      // A BOM, so Excel reads the Hebrew names as UTF-8.
+      var blob = new Blob(["﻿" + lines.join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = h("a", { href: url, download: "letsrun-newsletter-" + dayKey(new Date()) + ".csv" });
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+      toast(rows.length === 1 ? "יוצא מנוי אחד" : "יוצאו " + rows.length + " מנויים");
+    }).catch(function (e) { btn.disabled = false; fail(e); });
+  }
+
   // ------------------------------------------------------------------ user page ---
 
   function renderUser(id) {
@@ -1342,6 +1584,7 @@
       var facts = h("dl", { class: "facts" });
       [["אימייל", p.email], ["שכונה", p.neighborhood], ["נראה/תה לאחרונה", ago(p.last_active_at)],
         ["תנאי שימוש", p.terms_version ? "גרסה " + p.terms_version + " · " + ago(p.terms_accepted_at) : "לא אושרו עדיין"],
+        ["ניוזלטר", newsletterText(p.newsletter)],
         ["דיווחים פתוחים", String(u.open_reports)], ["חסימות ב־90 יום", String(u.blocks_90d)]]
         .forEach(function (kv) {
           if (!kv[1]) return;

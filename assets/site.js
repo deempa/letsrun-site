@@ -40,7 +40,7 @@
       var body = message + '\n\n' + name + (form.elements.org.value.trim() ? ' · ' + form.elements.org.value.trim() : '') + '\n' + email;
       status.hidden = false;
       status.textContent = 'פתחנו טיוטת מייל עם הפרטים. אם היא לא נפתחה, אפשר לכתוב ישירות לכתובת שמתחת לכפתור.';
-      window.location.href = 'mailto:masrab11@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+      window.location.href = 'mailto:support@letsrun.co.il?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
     });
   }
 })();
