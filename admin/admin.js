@@ -43,7 +43,10 @@
     ["report", "דיווחים"],
     ["location_update", "עדכוני מיקום"],
     ["link_preview", "פתיחת קישורי חיבור"],
-    ["events", "נתוני שימוש מהאפליקציה"]
+    ["events", "נתוני שימוש מהאפליקציה"],
+    ["crew_create", "קבוצות חדשות"],
+    ["crew_invite", "הזמנות לקבוצה"],
+    ["crew_rename", "שינויי שם של קבוצה"]
   ];
   var CONFIG = {
     min_version_ios: "iOS · גרסה מינימלית",
@@ -635,7 +638,7 @@
       if (!suspended) {
         actions.appendChild(h("button", { type: "button", class: "btn ink", onclick: function () { suspend(p, r.id); } }, "השעיה"));
       }
-      if (r.context && r.context.type === "message" && r.message_id && !r.message_removed) {
+      if (r.context && r.context.type === "message" && messageId(r) && !r.message_removed) {
         actions.appendChild(h("button", { type: "button", class: "btn outline", onclick: function () { removeMessage(r); } }, "הסרת ההודעה"));
       } else if (r.context && r.context.type === "run" && r.group_run_id && r.run_exists) {
         actions.appendChild(h("button", { type: "button", class: "btn outline", onclick: function () { removeRun(r); } }, "הסרת הריצה"));
@@ -682,6 +685,13 @@
     });
   }
 
+  // The reported line: a run chat line (message_id), or a crew chat line (v29: kept in the context only).
+  function messageId(r) {
+    if (r.message_id) return r.message_id;
+    var c = r.context;
+    return c && c.type === "message" && c.chat === "crew" && !c.removed ? c.message_id : null;
+  }
+
   function removeMessage(r) {
     confirmNote({
       title: "הסרת ההודעה",
@@ -691,7 +701,7 @@
       required: true
     }).then(function (note) {
       if (note === null) return;
-      rpc("admin_remove_message", { message: r.message_id, note: note }).then(function () {
+      rpc("admin_remove_message", { message: messageId(r), note: note }).then(function () {
         afterAction("ההודעה הוסרה");
       }).catch(fail);
     });
@@ -1472,7 +1482,7 @@
       avatar(u),
       h("span", { class: "who-text" },
         h("span", { class: "who-name", text: (u.name && u.name.trim()) || "ללא שם" }),
-        h("span", { class: "user-email", dir: "ltr", text: u.email || "—" })),
+        h("span", { class: "user-email", dir: "ltr", text: u.email || (u.provider === "anonymous" ? "חשבון אנונימי" : "—") })),
       h("span", { class: "user-side" },
         u.newsletter ? h("span", { class: "chip sub", text: "מנוי/ה" }) : null,
         u.suspended ? h("span", { class: "chip suspended", text: "מושעה/ית" }) : null,
