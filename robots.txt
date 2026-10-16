@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /c/
+Disallow: /r/
+
+Sitemap: https://letsrun.co.il/sitemap.xml

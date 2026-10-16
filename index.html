@@ -7,6 +7,7 @@
 <meta property="og:title" content="בוא נרוץ">
 <meta property="og:description" content="רצים ביחד בשכונה. ריצות קבוצתיות ליד הבית, בקצב שלך.">
 <meta property="og:type" content="website">
+<link rel="canonical" href="https://letsrun.co.il/">
 <meta name="description" content="רצים ביחד, בשכונה. ריצות קבוצתיות ליד הבית, בקצב שלך.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -44,11 +45,6 @@ h1{margin:0;font-size:104px;line-height:.98;font-weight:800;letter-spacing:-4px}
 .phone img{display:block;width:100%;height:auto;border-radius:48px}
 .phone::after{content:"";position:absolute;top:22px;left:50%;width:92px;height:27px;margin-left:-46px;border-radius:20px;background:var(--ink)}
 
-/* steps */
-.steps{list-style:none;margin:176px auto 0;padding:0;display:flex;justify-content:center;gap:120px}
-.steps li{display:flex;align-items:center;gap:14px;font-size:18px;font-weight:600;white-space:nowrap}
-.steps .ic{width:52px;height:52px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-
 /* footer */
 footer{margin-top:176px;border-top:1px solid var(--hair)}
 footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:24px;padding-top:32px;padding-bottom:40px;font-size:14px;color:var(--muted)}
@@ -71,8 +67,6 @@ footer a:hover{color:var(--ink)}
   .phone{width:262px;padding:8px;border-radius:48px}
   .phone img{border-radius:40px}
   .phone::after{top:17px;width:76px;height:22px;margin-left:-38px}
-  .steps{margin-top:96px;gap:8px;justify-content:space-between}
-  .steps li{flex-direction:column;gap:12px;font-size:15px;flex:1;text-align:center}
   footer{margin-top:96px}
   footer .wrap{flex-direction:column-reverse;align-items:flex-start;gap:16px;padding-top:28px}
   footer nav{gap:20px}
@@ -105,15 +99,10 @@ footer a:hover{color:var(--ink)}
       </div>
     </div>
     <div class="stage">
-      <div class="phone"><img src="img/app-feed.jpg" width="662" height="1440" alt="מסך הבית באפליקציה: ריצה קלה של 4 ק״מ בגן מאיר, על פוסטר מפה"></div>
+      <div class="phone"><img src="img/app-feed.jpg" width="662" height="1440" alt="מסך הבית באפליקציה: ריצה של 4 ק״מ בגן מאיר שיצאה לפני 12 דקות, על תמונה של הפארק"></div>
     </div>
   </section>
 
-  <ol class="steps">
-    <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E0E0E" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>פותחים ריצה</li>
-    <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E0E0E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>מצטרפים בנגיעה</li>
-    <li><span class="ic"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M5 19c3-1 4-6 8-7s7 2 8-5" stroke="#0E0E0E" stroke-width="2.2" stroke-linecap="round"/><circle cx="5" cy="19" r="3.2" fill="#D4FF3F" stroke="#0E0E0E" stroke-width="1.8"/></svg></span>רצים ביחד</li>
-  </ol>
 </main>
 
 <footer>
