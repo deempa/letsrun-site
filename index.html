@@ -6,8 +6,8 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/img/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
-<title>בוא נרוץ</title>
-<meta property="og:title" content="בוא נרוץ">
+<title>בוא נרוץ: אפליקציה לריצות קבוצתיות ושותפים לריצה לידך</title>
+<meta property="og:title" content="בוא נרוץ: ריצות קבוצתיות ושותפים לריצה לידך">
 <meta property="og:description" content="רצים ביחד בשכונה. ריצות קבוצתיות ליד הבית, בקצב שלך.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://letsrun.co.il/">
@@ -17,7 +17,59 @@
 <meta property="og:image:alt" content="בוא נרוץ">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://letsrun.co.il/">
-<meta name="description" content="רצים ביחד, בשכונה. ריצות קבוצתיות ליד הבית, בקצב שלך.">
+<meta name="description" content="אפליקציה בעברית למציאת ריצות קבוצתיות ושותפים לריצה ליד הבית, בקצב שלך: ריצות קלות, לונג ראן, אינטרוולים וריצות למתחילים. בטא לאייפון.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://letsrun.co.il/#organization",
+      "name": "בוא נרוץ",
+      "alternateName": ["Let's Run", "Lets Run"],
+      "url": "https://letsrun.co.il/",
+      "logo": { "@type": "ImageObject", "url": "https://letsrun.co.il/img/apple-touch-icon.png", "width": 180, "height": 180 },
+      "image": "https://letsrun.co.il/img/og.png",
+      "description": "אפליקציה בעברית לריצות קבוצתיות ולמציאת שותפים לריצה ליד הבית, בקצב שלך.",
+      "areaServed": { "@type": "Country", "name": "ישראל" },
+      "contactPoint": { "@type": "ContactPoint", "contactType": "customer support", "email": "support@letsrun.co.il", "availableLanguage": "he" }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://letsrun.co.il/#website",
+      "url": "https://letsrun.co.il/",
+      "name": "בוא נרוץ",
+      "alternateName": "Let's Run",
+      "inLanguage": "he-IL",
+      "publisher": { "@id": "https://letsrun.co.il/#organization" }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://letsrun.co.il/#webpage",
+      "url": "https://letsrun.co.il/",
+      "name": "בוא נרוץ: אפליקציה לריצות קבוצתיות ושותפים לריצה לידך",
+      "inLanguage": "he-IL",
+      "isPartOf": { "@id": "https://letsrun.co.il/#website" },
+      "about": { "@id": "https://letsrun.co.il/#app" },
+      "primaryImageOfPage": { "@type": "ImageObject", "url": "https://letsrun.co.il/img/og.png", "width": 1200, "height": 630 }
+    },
+    {
+      "@type": "MobileApplication",
+      "@id": "https://letsrun.co.il/#app",
+      "name": "בוא נרוץ",
+      "alternateName": "Let's Run",
+      "description": "אפליקציה בעברית למציאת ריצות קבוצתיות ושותפים לריצה ליד הבית, לפי קצב. גרסת בטא לאייפון ב-TestFlight, גרסת אנדרואיד בקרוב.",
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "iOS",
+      "inLanguage": "he",
+      "url": "https://letsrun.co.il/",
+      "downloadUrl": "https://testflight.apple.com/join/U2SmA9NM",
+      "screenshot": "https://letsrun.co.il/img/app-feed.jpg",
+      "publisher": { "@id": "https://letsrun.co.il/#organization" }
+    }
+  ]
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Nunito:wght@800;900&display=swap">
@@ -56,6 +108,41 @@ h1{margin:0;font-size:104px;line-height:.98;font-weight:800;letter-spacing:-4px}
 .phone img{display:block;width:100%;height:auto;border-radius:48px}
 .phone::after{content:"";position:absolute;top:22px;left:50%;width:92px;height:27px;margin-left:-46px;border-radius:20px;background:var(--ink)}
 
+
+/* below the hero: one calm reading column */
+.more{max-width:760px;margin:0 auto}
+.block{padding-top:120px}
+.block h2{margin:0;font-size:40px;line-height:1.1;font-weight:800;letter-spacing:-1.2px}
+.block p{margin:20px 0 0;font-size:19px;line-height:1.75;color:#3A3A3E}
+.block p b{color:var(--ink)}
+.block a{text-underline-offset:3px;text-decoration-thickness:1px}
+.steps{list-style:none;margin:32px 0 0;padding:0;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:44px 1fr;gap:4px 16px;padding:22px 0;border-top:1px solid var(--hair)}
+.steps li:last-child{border-bottom:1px solid var(--hair)}
+.steps li::before{content:counter(s);grid-row:span 2;font-family:Nunito,Heebo,sans-serif;font-weight:900;font-size:28px;line-height:1.1}
+.steps b{font-size:20px;font-weight:800}
+.steps span{font-size:17px;line-height:1.65;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0;padding:0;list-style:none}
+.chips li{font-size:15px;font-weight:700;padding:8px 16px;border-radius:999px;background:var(--surface)}
+.facts{margin:28px 0 0;padding:0;list-style:none}
+.facts li{position:relative;padding:14px 26px 14px 0;font-size:18px;line-height:1.65;color:#3A3A3E;border-top:1px solid var(--hair)}
+.facts li::before{content:"";position:absolute;right:2px;top:26px;width:9px;height:9px;border-radius:50%;background:var(--volt);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.facts b{color:var(--ink)}
+.guides{display:grid;grid-template-columns:1fr 1fr;gap:0 32px;margin:28px 0 0;padding:0;list-style:none}
+.guides a{display:block;padding:16px 0;border-top:1px solid var(--hair);text-decoration:none;font-weight:700;font-size:17px;line-height:1.45}
+.guides a:hover{text-decoration:underline}
+.guides small{display:block;font-weight:500;font-size:14px;color:var(--muted);margin-top:2px}
+.faq{margin-top:28px;border-top:1px solid var(--hair)}
+.faq details{border-bottom:1px solid var(--hair)}
+.faq summary{cursor:pointer;list-style:none;padding:20px 0;font-weight:800;font-size:18px;display:flex;justify-content:space-between;gap:16px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:Nunito,Heebo,sans-serif;font-size:24px;line-height:1;color:var(--muted)}
+.faq details[open] summary::after{content:"–"}
+.faq details p{margin:0;padding:0 0 22px;font-size:17px}
+.again{margin-top:56px;display:flex;justify-content:center}
+.again .store{height:56px}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--volt);outline-offset:3px;border-radius:8px}
+
 /* footer */
 footer{margin-top:176px;border-top:1px solid var(--hair)}
 footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:24px;padding-top:32px;padding-bottom:40px;font-size:14px;color:var(--muted)}
@@ -85,6 +172,11 @@ footer a:hover{color:var(--ink)}
   .phone img{border-radius:40px}
   .phone::after{top:17px;width:76px;height:22px;margin-left:-38px}
   footer{margin-top:96px}
+  .block{padding-top:88px}
+  .block h2{font-size:30px;letter-spacing:-.8px}
+  .block p{font-size:17px}
+  .facts li{font-size:17px}
+  .guides{grid-template-columns:1fr}
   footer .wrap{flex-direction:column-reverse;align-items:flex-start;gap:16px;padding-top:28px}
   footer nav{gap:20px}
 }
@@ -93,7 +185,7 @@ footer a:hover{color:var(--ink)}
 <body>
 
 <header class="top wrap">
-  <a class="brand" href="#" aria-label="בוא נרוץ">
+  <a class="brand" href="/" aria-label="בוא נרוץ">
     <svg width="36" height="26" viewBox="0 0 36 26" aria-hidden="true"><circle cx="23" cy="13" r="11.5" fill="#D4FF3F"/><circle cx="13" cy="13" r="10" fill="none" stroke="#0E0E0E" stroke-width="3"/></svg>
     בוא נרוץ
   </a>
@@ -104,21 +196,98 @@ footer a:hover{color:var(--ink)}
     <div>
       <h1>רצים ביחד<br><span class="nowrap">בשכונה<span class="dot" aria-hidden="true"></span></span></h1>
       <p class="lede">ריצות קבוצתיות ליד הבית, בקצב שלך.</p>
-      <div class="stores">
+      <div class="stores" id="download">
         <a class="store ios" href="https://testflight.apple.com/join/U2SmA9NM" rel="noopener">
           <svg width="20" height="24" viewBox="0 0 22 26" aria-hidden="true"><path fill="currentColor" d="M18.2 13.8c0-2.9 2.4-4.3 2.5-4.4-1.4-2-3.5-2.3-4.3-2.3-1.8-.2-3.6 1.1-4.5 1.1-.9 0-2.4-1.1-3.9-1-2 0-3.9 1.2-4.9 3-2.1 3.7-.5 9.1 1.5 12.1 1 1.5 2.2 3.1 3.7 3 1.5-.1 2.1-1 3.9-1s2.3 1 3.9.9c1.6 0 2.6-1.5 3.6-3 1.1-1.7 1.6-3.4 1.6-3.5-.1 0-3.1-1.2-3.1-4.9zM15.3 5.1c.8-1 1.4-2.4 1.2-3.8-1.2.1-2.6.8-3.4 1.8-.8.9-1.4 2.3-1.2 3.7 1.3.1 2.6-.7 3.4-1.7z"/></svg>
           <span><small>בטא לאייפון</small><b>TestFlight</b></span>
         </a>
-        <span class="store play" aria-label="Google Play, בקרוב">
+        <a class="store play" href="mailto:support@letsrun.co.il?subject=%D7%A2%D7%93%D7%9B%D7%A0%D7%95%20%D7%90%D7%95%D7%AA%D7%99%20%D7%9B%D7%A9%D7%91%D7%95%D7%90%20%D7%A0%D7%A8%D7%95%D7%A5%20%D7%A2%D7%95%D7%9C%D7%94%20%D7%9C%D7%90%D7%A0%D7%93%D7%A8%D7%95%D7%90%D7%99%D7%93" aria-label="Google Play, בקרוב. לשליחת בקשה לעדכון במייל">
           <svg width="20" height="22" viewBox="0 0 22 24" aria-hidden="true"><path fill="currentColor" d="M1.2.6C.9.9.7 1.4.7 2v20c0 .6.2 1.1.5 1.4l11.2-11.4L1.2.6zm12.4 12.6l3.3 3.4-14 8c-.4.2-.8.3-1.1.2l11.8-11.6zm0-2.4L1.8-.2c.3-.1.7 0 1.1.2l14 8-3.3 2.8zm4.4 4.9L14.5 12l3.5-3.6 3.6 2c1 .6 1 1.6 0 2.2l-3.6 2.1z"/></svg>
           <span><small>בקרוב ב-</small><b>Google Play</b></span>
-        </span>
+        </a>
       </div>
     </div>
     <div class="stage">
       <div class="phone"><img src="img/app-feed.jpg" width="662" height="1440" alt="מסך הבית באפליקציה: ריצה של 4 ק״מ בגן מאיר שיצאה לפני 12 דקות, על תמונה של הפארק"></div>
     </div>
   </section>
+
+  <div class="more">
+    <section class="block" id="about">
+      <h2>מה זה בוא נרוץ</h2>
+      <p><b>בוא נרוץ היא אפליקציה בעברית שמחברת בין רצים באותה שכונה.</b> פותחים את האפליקציה, רואים אילו ריצות יוצאות לידכם היום או בימים הקרובים, ומצטרפים לריצה בקצב שמתאים לכם. אפשר גם לפתוח ריצה משלכם ולתת לאחרים להצטרף. בלי מועדון, בלי התחייבות ובלי לרוץ לבד כשלא בא לכם.</p>
+      <p>האפליקציה מיועדת לכל מי שרץ, מאלה שעושים את הקילומטר הראשון ועד מי שמתכוננים למרתון, בכל רחבי הארץ.</p>
+    </section>
+
+    <section class="block" id="how">
+      <h2>איך זה עובד</h2>
+      <ol class="steps">
+        <li><b>רואים מה יוצא לידכם</b><span>ריצות של עכשיו, שיוצאות בשעות הקרובות, וריצות מתוכננות לשבוע הקרוב. לכל ריצה יש נקודת מפגש, שעה, מרחק וטווח קצב.</span></li>
+        <li><b>מצטרפים או פותחים ריצה</b><span>מצטרפים בלחיצה, או שולחים בקשה כשהמארגנים מאשרים כל משתתף. אפשר גם לפתוח ריצה משלכם, עם נקודת מפגש במקום ציבורי. לכל ריצה יש צ׳אט קבוצתי לתיאום.</span></li>
+        <li><b>נפגשים ורצים</b><span>אחרי ריצה טובה אפשר לסמן שרוצים לרוץ עם אותו אדם שוב. כשהרצון הדדי, נוצר חיבור, וככה נבנית קבוצה קבועה.</span></li>
+      </ol>
+    </section>
+
+    <section class="block" id="pace">
+      <h2>ריצות בקצב שלך</h2>
+      <p>הפער שהכי מקלקל ריצה משותפת הוא פער בקצב. לכן כל ריצה מציגה את טווח הקצב שלה, ולידו את הקצב שלכם, כך שרואים מראש אם יש התאמה. בריצה קלה, פער של עד כ-15 שניות לקילומטר בדרך כלל לא מורגש. <a href="blog/pace-partner.html">איך בוחרים שותפים לריצה לפי קצב</a>.</p>
+      <ul class="chips" aria-label="סוגי ריצות">
+        <li>ריצה קלה</li><li>לונג ראן</li><li>טמפו</li><li>אינטרוולים</li><li>מתחילים</li><li>שטח</li>
+      </ul>
+    </section>
+
+    <section class="block" id="safety">
+      <h2>בטיחות ופרטיות</h2>
+      <p>לרוץ עם אנשים חדשים צריך להרגיש בטוח. זה מה שהאפליקציה עושה בשביל זה:</p>
+      <ul class="facts">
+        <li><b>המיקום שלך לא מוצג לאחרים.</b> בשרת הוא נשמר מעוגל לכ-250 מטר, רק כדי להציג ריצות בסביבה.</li>
+        <li><b>נקודות מפגש במקומות ציבוריים</b>, כמו פארקים וטיילות. בריצה שדורשת אישור, המקום והשעה המדויקים גלויים רק למי שאושר.</li>
+        <li><b>שיתוף פרטי הריצה עם מישהו קרוב</b>, כדי שמישהו ידע איפה את/ה ומתי.</li>
+        <li><b>חסימה ודיווח</b> מכל פרופיל, ובדיקה של תמונות לפני שהן מתפרסמות.</li>
+        <li><b>גיל 18 ומעלה</b> בלבד.</li>
+      </ul>
+      <p><a href="blog/safe-first-run.html">ריצה ראשונה עם מישהו חדש: מה כדאי לדעת</a> · <a href="privacy/">מדיניות הפרטיות המלאה</a></p>
+    </section>
+
+    <section class="block" id="guides">
+      <h2>מדריכים מהבלוג</h2>
+      <ul class="guides">
+        <li><a href="blog/zero-to-5k.html">מאפס ל-5 ק״מ: תוכנית של 9 שבועות<small>למתחילים, שבוע אחרי שבוע</small></a></li>
+        <li><a href="blog/running-in-heat.html">ריצה בחום ובלחות של ישראל<small>מתי לצאת, כמה לשתות, ומכת חום</small></a></li>
+        <li><a href="blog/run-slow-80-20.html">לרוץ לאט כדי לרוץ מהר: שיטת 80/20<small>למה רוב הריצות צריכות להיות קלות</small></a></li>
+        <li><a href="blog/strength-for-runners.html">אימון כוח לרצים<small>20 דקות פעמיים בשבוע</small></a></li>
+        <li><a href="blog/eat-before-after-run.html">מה לאכול לפני ריצה ואחריה<small>משוקו ועד תמרים</small></a></li>
+        <li><a href="blog/running-together-science.html">למה קל יותר לרוץ ביחד<small>מה המחקר אומר</small></a></li>
+      </ul>
+    </section>
+
+    <section class="block" id="faq">
+      <h2>שאלות נפוצות</h2>
+      <div class="faq">
+        <details>
+          <summary>איך מוצאים שותף או קבוצה לריצה באזור?</summary>
+          <p>פותחים את האפליקציה ורואים את הריצות שיוצאות לידכם, עם המרחק, השעה וטווח הקצב של כל אחת. מצטרפים לריצה שמתאימה, או פותחים ריצה משלכם ומחכים שאחרים יצטרפו.</p>
+        </details>
+        <details>
+          <summary>אני רק מתחיל/ה לרוץ. זה בשבילי?</summary>
+          <p>בהחלט. יש ריצות מסוג &quot;מתחילים&quot;, שבהן ברור מראש שהולכים לאט ושמותר לעצור ללכת. ואם עוד לא התחלתם, <a href="blog/zero-to-5k.html">התוכנית שלנו מאפס ל-5 ק״מ</a> היא נקודת פתיחה טובה.</p>
+        </details>
+        <details>
+          <summary>מי רואה את המיקום שלי?</summary>
+          <p>אף אחד. המיקום נשמר בשרת מעוגל לכ-250 מטר ומשמש רק כדי להציג ריצות בסביבה. מה שאחרים רואים הוא נקודת המפגש של ריצה, שנקבעת במקום ציבורי.</p>
+        </details>
+        <details>
+          <summary>מתי האפליקציה תהיה באנדרואיד?</summary>
+          <p>בקרוב. כרגע יש גרסת בטא לאייפון דרך TestFlight. רוצים לדעת כשהיא עולה ל-Google Play? <a href="mailto:support@letsrun.co.il?subject=%D7%A2%D7%93%D7%9B%D7%A0%D7%95%20%D7%90%D7%95%D7%AA%D7%99%20%D7%9B%D7%A9%D7%91%D7%95%D7%90%20%D7%A0%D7%A8%D7%95%D7%A5%20%D7%A2%D7%95%D7%9C%D7%94%20%D7%9C%D7%90%D7%A0%D7%93%D7%A8%D7%95%D7%90%D7%99%D7%93">שלחו לנו מייל</a> ונעדכן.</p>
+        </details>
+        <details>
+          <summary>מי יכול להצטרף?</summary>
+          <p>כל מי שבגיל 18 ומעלה. ההתחברות נעשית עם חשבון Apple או Google, בלי סיסמה חדשה.</p>
+        </details>
+      </div>
+      <div class="again"><a class="store ios" href="#download">למעלה, להורדה</a></div>
+    </section>
+  </div>
 
 </main>
 
@@ -127,7 +296,7 @@ footer a:hover{color:var(--ink)}
     <span>© <span class="num">2026</span> בוא נרוץ</span>
     <nav aria-label="קישורים">
       <a href="mailto:support@letsrun.co.il">שיתופי פעולה: <span dir="ltr">support@letsrun.co.il</span></a>
-      <a href="blog/index.html">בלוג</a>
+      <a href="blog/">בלוג</a>
       <a href="privacy/">פרטיות</a>
       <a href="terms/">תנאי שימוש</a>
       <a href="delete-account/">מחיקת חשבון</a>
