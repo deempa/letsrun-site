@@ -249,3 +249,47 @@ form.contact { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); 
 .article .body ul, .article .body ol { margin: 0; padding-inline-start: 1.2em; display: flex; flex-direction: column; gap: 8px; }
 .article .callout { border-radius: var(--radius-m); background: var(--surface); padding: 24px; }
 .article .end { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--hairline); display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+
+/* Long-form guides: takeaways, contents, tables, FAQ, sources */
+.article .byline { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: var(--step--1); }
+.article .byline b { color: var(--ink); font-weight: 700; }
+.article .intro { font-size: var(--step-1); line-height: 1.7; }
+.article .body h3 { font-size: var(--step-1); font-weight: 800; margin-top: 8px; line-height: 1.35; }
+.article .body a { text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.article .body ol.steps li::marker { font-family: var(--font-num); font-weight: 800; }
+.tldr { border-radius: var(--radius-m); border: 2px solid var(--ink); padding: 24px 28px; }
+.tldr h2 { font-size: var(--step-1) !important; margin: 0 0 12px !important; }
+.tldr ul { gap: 10px !important; }
+.tldr li::marker { color: var(--ink); }
+.toc { border-inline-start: 3px solid var(--volt); padding: 4px 20px; }
+.toc p { font-weight: 800; font-size: var(--step--1); color: var(--muted); letter-spacing: 0.04em; }
+.toc ol { margin-top: 10px !important; gap: 6px !important; font-size: 1rem; }
+.toc a { text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.article .body h2[id], .article .body h3[id] { scroll-margin-top: 96px; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--hairline); border-radius: var(--radius-s); }
+.article table { width: 100%; border-collapse: collapse; font-size: 0.98rem; line-height: 1.55; }
+.article caption { caption-side: bottom; text-align: start; padding: 12px 16px; font-size: var(--step--1); color: var(--muted); }
+.article th, .article td { text-align: start; vertical-align: top; padding: 12px 16px; border-bottom: 1px solid var(--hairline); }
+.article thead th { background: var(--surface); font-weight: 800; font-size: var(--step--1); }
+.article tbody tr:last-child td { border-bottom: 0; }
+.article td.wk { font-family: var(--font-num); font-weight: 800; white-space: nowrap; }
+.article .warn { border-radius: var(--radius-m); background: #FFF1EC; padding: 24px; border-inline-start: 4px solid #E5484D; }
+.article .warn p + p, .article .callout p + p { margin-top: 10px; }
+.article .formula { font-family: var(--font-num); font-weight: 800; background: var(--surface); border-radius: var(--radius-s); padding: 16px 20px; text-align: center; direction: rtl; }
+.faq { display: flex; flex-direction: column; border-top: 1px solid var(--hairline); }
+.faq details { border-bottom: 1px solid var(--hairline); }
+.faq summary { cursor: pointer; list-style: none; padding: 18px 0; font-weight: 800; display: flex; justify-content: space-between; gap: 16px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font-family: var(--font-num); font-size: 1.4rem; line-height: 1; color: var(--muted); }
+.faq details[open] summary::after { content: "–"; }
+.faq details > p { padding-bottom: 20px; }
+.sources { font-size: 0.95rem; line-height: 1.6; color: var(--muted); }
+.sources a { color: var(--ink); overflow-wrap: anywhere; }
+.article .disclaimer { font-size: var(--step--1); color: var(--muted); border-top: 1px solid var(--hairline); padding-top: 20px; }
+.related { margin-top: 56px; }
+.related > p { font-weight: 800; }
+.related .posts { margin-top: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 640px) { .related .posts { grid-template-columns: minmax(0, 1fr); } .tldr { padding: 20px; } }
+.post-card.featured { background: var(--surface); border-color: transparent; }
+.post-card.featured:hover { border-color: var(--ink); }
