@@ -45,8 +45,10 @@ body {
 img, svg { max-width: 100%; }
 a { color: inherit; }
 a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
-  outline: 3px solid var(--volt); outline-offset: 3px; border-radius: 8px;
+  outline: 3px solid var(--ink); outline-offset: 3px; border-radius: 8px;
 }
+/* Volt is too light to see on white; it only works as a focus ring on the dark download box. */
+.download .box a:focus-visible { outline-color: var(--volt); }
 h1, h2, h3 { margin: 0; line-height: 1.12; text-wrap: balance; letter-spacing: -0.02em; }
 p { margin: 0; }
 .num { font-family: var(--font-num); font-weight: 800; font-variant-numeric: tabular-nums; unicode-bidi: isolate; direction: ltr; }
@@ -71,8 +73,9 @@ p { margin: 0; }
 .mark::before { right: 0; background: var(--volt); }
 .mark::after { left: 0; border: 2.5px solid var(--ink); }
 .nav { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; }
-.nav a { text-decoration: none; color: var(--muted); }
-.nav a:hover { color: var(--ink); }
+.nav a { text-decoration: none; }
+.nav a:not(.btn) { color: var(--muted); }
+.nav a:not(.btn):hover { color: var(--ink); }
 @media (max-width: 760px) { .nav .nav-link { display: none; } }
 
 .btn {
