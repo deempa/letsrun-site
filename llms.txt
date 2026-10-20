@@ -1,0 +1,22 @@
+# בוא נרוץ (Let's Run)
+
+> אפליקציה ישראלית חינמית לאייפון למציאת ריצות קבוצתיות ושותפים לריצה ליד הבית, לפי קצב. אנדרואיד בקרוב. אין קשר לאתר האמריקאי LetsRun.com.
+
+## האפליקציה
+- [דף הבית](https://letsrun.co.il/): מה זה, איך זה עובד, ריצות לפי קצב, בטיחות ופרטיות, שאלות נפוצות
+- [להורדה ב-App Store](https://apps.apple.com/il/app/id6820719707)
+
+## מדריכים
+- [מאפס ל-5 ק״מ](https://letsrun.co.il/blog/zero-to-5k.html): תוכנית הליכה-ריצה של 9 שבועות למתחילים
+- [ריצה בחום ובלחות של ישראל](https://letsrun.co.il/blog/running-in-heat.html): שעות, שתייה, הסתגלות ומכת חום
+- [למה קל יותר לרוץ ביחד](https://letsrun.co.il/blog/running-together-science.html): מה המחקר אומר על ריצה עם אחרים
+- [אימון כוח לרצים](https://letsrun.co.il/blog/strength-for-runners.html): 7 תרגילים, תוכנית של 8 שבועות
+- [מה לאכול לפני ריצה ואחריה](https://letsrun.co.il/blog/eat-before-after-run.html)
+- [שיטת 80/20](https://letsrun.co.il/blog/run-slow-80-20.html): לרוץ לאט כדי לרוץ מהר
+- [איך לבחור שותף/ה לריצה לפי קצב](https://letsrun.co.il/blog/pace-partner.html)
+- [ריצה ראשונה עם מישהו חדש](https://letsrun.co.il/blog/safe-first-run.html)
+
+## מדיניות
+- [פרטיות](https://letsrun.co.il/privacy/)
+- [תנאי שימוש](https://letsrun.co.il/terms/)
+- [מחיקת חשבון](https://letsrun.co.il/delete-account/)

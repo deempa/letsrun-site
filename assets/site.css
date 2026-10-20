@@ -238,7 +238,7 @@ form.contact { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); 
 .site-footer { border-top: 1px solid var(--hairline); padding-block: 48px; font-size: var(--step--1); color: var(--muted); }
 .site-footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
 .site-footer nav { display: flex; flex-wrap: wrap; gap: 20px; }
-.site-footer a { text-decoration: none; }
+.site-footer a { text-decoration: none; padding-block: 4px; }
 .site-footer a:hover { color: var(--ink); }
 
 /* Blog article pages */
@@ -291,7 +291,7 @@ form.contact { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); 
 .sources a { color: var(--ink); overflow-wrap: anywhere; }
 .article .disclaimer { font-size: var(--step--1); color: var(--muted); border-top: 1px solid var(--hairline); padding-top: 20px; }
 .related { margin-top: 56px; }
-.related > p { font-weight: 800; }
+.related > h2 { font: inherit; font-weight: 800; letter-spacing: inherit; }
 .related .posts { margin-top: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 640px) { .related .posts { grid-template-columns: minmax(0, 1fr); } .tldr { padding: 20px; } }
 .post-card.featured { background: var(--surface); border-color: transparent; }
