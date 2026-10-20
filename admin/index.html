@@ -22,29 +22,74 @@
 <script src="admin.js" defer></script>
 </head>
 <body>
-<!-- Admin page for בוא נרוץ (round 24). Not linked from the site. Everything it shows or changes goes through
-     admin_* RPCs that the database allows only for the accounts in private.admins. -->
-<header class="bar">
-  <div class="bar-row">
-    <span class="logo" aria-hidden="true"><span class="logo-fill"></span><span class="logo-ring"></span></span>
-    <b class="bar-title">ניהול</b>
-    <span class="bar-email" id="who" hidden></span>
-    <button type="button" class="bar-out" id="sign-out" hidden>יציאה</button>
-  </div>
-  <nav class="tabs" role="tablist" aria-label="מדורים" id="tabs" hidden>
-    <button type="button" role="tab" id="tab-overview" aria-controls="view" data-tab="overview">מבט על</button>
-    <button type="button" role="tab" id="tab-users" aria-controls="view" data-tab="users">משתמשים</button>
-    <button type="button" role="tab" id="tab-reports" aria-controls="view" data-tab="reports">דיווחים<span class="count" id="count-reports" hidden></span></button>
-    <button type="button" role="tab" id="tab-flags" aria-controls="view" data-tab="flags">סימונים<span class="count" id="count-flags" hidden></span></button>
-    <button type="button" role="tab" id="tab-words" aria-controls="view" data-tab="words">מילים</button>
-    <button type="button" role="tab" id="tab-log" aria-controls="view" data-tab="log">יומן</button>
-    <button type="button" role="tab" id="tab-settings" aria-controls="view" data-tab="settings">הגדרות</button>
-  </nav>
-</header>
+<!-- Admin page for בוא נרוץ (round 24; round 38: sketch A on a computer, sketch B on a phone). Not linked from the
+     site. Everything it shows or changes goes through admin_* RPCs that the database allows only for the accounts in
+     private.admins. -->
+<div class="shell">
+  <!-- Computer: the ink side menu (right, RTL). -->
+  <aside class="side" id="side" aria-label="ניהול" hidden>
+    <div class="side-brand">
+      <span class="logo" aria-hidden="true"><span class="logo-fill"></span><span class="logo-ring"></span></span>
+      <span class="side-title"><b>ניהול</b><span>בוא נרוץ</span></span>
+    </div>
+    <button type="button" class="side-search" data-search>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4-4"/></svg>
+      <span>חיפוש</span><kbd dir="ltr">⌘K</kbd>
+    </button>
+    <nav class="side-nav" aria-label="מדורים">
+      <a href="#overview" data-nav="overview">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z"/></svg>מבט על</a>
+      <a href="#inbox" data-nav="inbox">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13l2.5-8h11L20 13v6H4zM4 13h4.5l1 2.5h5l1-2.5H20"/></svg>צריך טיפול<span class="count" data-count hidden></span></a>
+      <a href="#users" data-nav="users">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.8a3.3 3.3 0 0 1 0 6.4M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg>משתמשים</a>
+      <a href="#runs" data-nav="runs">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 21l3-6 3 2v4M6.5 11.5l3-3.5 4 1.5 2.5 3h3M11 15l2-5"/></svg>ריצות</a>
+      <a href="#log" data-nav="log">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h9l3 3v14H6zM9 10h6M9 14h6M9 18h3"/></svg>יומן</a>
+      <a href="#words" data-nav="words">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7M17 15l4 4M21 15l-4 4"/></svg>מילים חסומות</a>
+      <a href="#settings" data-nav="settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M14 4.5v5M8 14.5v5"/></svg>הגדרות</a>
+    </nav>
+    <div class="side-foot">
+      <span class="side-email" id="who" dir="ltr"></span>
+      <button type="button" class="side-out" data-sign-out>יציאה</button>
+    </div>
+  </aside>
 
-<main id="view" class="view" tabindex="-1" aria-live="polite">
-  <p class="loading"><span class="dot" aria-hidden="true"></span>טוענים…</p>
-</main>
+  <div class="main">
+    <!-- Phone: the ink top bar (sign-in screens show it too). -->
+    <header class="bar" id="bar">
+      <span class="logo" aria-hidden="true"><span class="logo-fill"></span><span class="logo-ring"></span></span>
+      <b class="bar-title">ניהול</b>
+      <button type="button" class="bar-icon" data-search aria-label="חיפוש" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4-4"/></svg>
+      </button>
+      <button type="button" class="bar-out" id="sign-out" data-sign-out hidden>יציאה</button>
+    </header>
+
+    <main id="view" class="view" tabindex="-1" aria-live="polite">
+      <p class="loading"><span class="dot" aria-hidden="true"></span>טוענים…</p>
+    </main>
+  </div>
+
+  <!-- Phone: the bottom tabs (sketch B). -->
+  <nav class="tabbar" id="tabbar" aria-label="מדורים" hidden>
+    <a href="#inbox" data-nav="inbox">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13l2.5-8h11L20 13v6H4zM4 13h4.5l1 2.5h5l1-2.5H20"/></svg>
+      <span>משימות</span><span class="count" data-count hidden></span></a>
+    <a href="#users" data-nav="users">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.8a3.3 3.3 0 0 1 0 6.4M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg>
+      <span>משתמשים</span></a>
+    <a href="#runs" data-nav="runs">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 21l3-6 3 2v4M6.5 11.5l3-3.5 4 1.5 2.5 3h3M11 15l2-5"/></svg>
+      <span>ריצות</span></a>
+    <a href="#more" data-nav="more">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg>
+      <span>עוד</span></a>
+  </nav>
+</div>
 
 <!-- Sign-in: an email one-time code. -->
 <template id="t-signin">
@@ -148,6 +193,55 @@
       <button type="button" class="btn text" id="confirm-cancel">ביטול</button>
     </div>
   </form>
+</dialog>
+
+<!-- Deleting an account (round 38): what goes, what stays, a reason, and the word "מחיקה". -->
+<dialog id="delete" class="sheet wide" aria-labelledby="delete-title">
+  <form class="stack" id="delete-form" novalidate>
+    <div class="dlg-head">
+      <span class="dlg-icon danger" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
+      </span>
+      <div class="dlg-head-text">
+        <h2 id="delete-title"></h2>
+        <p class="muted">זה בלתי הפיך, כמו מחיקה שהמשתמש/ת עושה בעצמו/ה מהאפליקציה.</p>
+      </div>
+    </div>
+    <div class="impact">
+      <div><b class="impact-gone">יימחק</b><ul id="delete-gone"></ul></div>
+      <div><b class="impact-kept">נשמר</b><ul id="delete-kept"></ul></div>
+    </div>
+    <div class="suggest" id="delete-suggest">
+      <span>רוצה רק לעצור? השעיה הפיכה.</span>
+      <button type="button" class="btn text" id="delete-suspend">השעיה במקום</button>
+    </div>
+    <label class="field">
+      <span class="label">סיבה (חובה, נשמרת ביומן)</span>
+      <textarea id="delete-reason" rows="2" maxlength="500" required></textarea>
+    </label>
+    <label class="field">
+      <span class="label">כדי לאשר, מקלידים: <b>מחיקה</b></span>
+      <input type="text" id="delete-word" autocomplete="off" spellcheck="false" required>
+    </label>
+    <p class="form-error" id="delete-error" role="alert" hidden></p>
+    <div class="actions">
+      <button type="submit" class="btn danger" id="delete-ok" disabled>מחיקה לצמיתות</button>
+      <button type="button" class="btn text" id="delete-cancel">ביטול</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Quick search (⌘K): people and runs. -->
+<dialog id="finder" class="sheet finder" aria-label="חיפוש מהיר">
+  <div class="finder-box">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4-4"/></svg>
+    <input type="search" id="finder-input" placeholder="שם, מייל, מזהה או ריצה" aria-label="חיפוש משתמש או ריצה"
+           autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="finder-list"
+           aria-autocomplete="list">
+    <kbd>Esc</kbd>
+  </div>
+  <div class="finder-list" id="finder-list" role="listbox" aria-label="תוצאות"></div>
+  <p class="finder-hint" id="finder-hint">לפחות 2 אותיות. ↑ ↓ לבחירה, Enter לפתיחה.</p>
 </dialog>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden>
