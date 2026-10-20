@@ -1852,7 +1852,7 @@
         avatar(u),
         h("span", { class: "who-text" }, h("span", { class: "who-name", text: nameAge(u) }),
           h("span", { class: "user-email", dir: "ltr", title: u.email || null, text: u.email || "—" })))),
-      h("td", { class: "c-area", text: u.neighborhood || "—" }),
+      h("td", { class: "c-area", title: u.neighborhood || null, text: u.neighborhood || "—" }),
       h("td", { class: "c-trust" }, trustChip(u.trust_level)),
       h("td", { class: "c-runs" }, h("span", { class: "num", text: fmt(runs) }),
         u.runs_organized ? h("small", { text: " · ארגן/ה " + u.runs_organized }) : null),

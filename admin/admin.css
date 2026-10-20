@@ -464,6 +464,7 @@ a.who:hover .who-name { text-decoration: underline; }
 .c-runs { white-space: nowrap; }
 .c-runs small { font-size: 12px; color: var(--muted); }
 .c-area, .c-joined, .c-active { color: var(--soft); white-space: nowrap; }
+.utable td.c-area { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
 .device { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .device small { font-size: 11px; color: var(--muted); }
 .c-menu { width: 48px; text-align: end; }
