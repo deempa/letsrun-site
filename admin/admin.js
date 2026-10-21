@@ -520,13 +520,19 @@
 
   // ------------------------------------------------------------------ entering ---
 
+  // An enter() in flight (the link's sign-in can arrive both from getSession() and from onAuthStateChange).
+  var entering = false;
+
   function enter(session) {
+    if (entering) return;
+    entering = true;
     state.email = (session.user && session.user.email) || "";
     $("who").textContent = state.email;
     $("sign-out").hidden = false;
     loading("בודקים הרשאה…");
     Promise.all([rpc("admin_reports", { status: "open", max_rows: 200 }), rpc("admin_flags")])
       .then(function (res) {
+        entering = false;
         state.openReports = res[0] || [];
         state.flags = res[1] || [];
         updateCounts();
@@ -535,6 +541,7 @@
         route();
       })
       .catch(function (e) {
+        entering = false;
         if (code(e) === "not_admin") return showDenied();
         if (code(e) === "mfa_required") return secondStep();
         fail(e);
@@ -2736,27 +2743,21 @@
       show(empty("הדף לא נטען עד הסוף", "בדקו את החיבור ונסו לרענן."));
       return;
     }
-    // The admin session (aal2) lives in sessionStorage (PRA-27): it ends with the tab and is not kept on disk for the
-    // whole letsrun.co.il origin. Sessions saved in localStorage by older versions of this page are removed once.
-    try {
-      ["letsrun-admin", "letsrun-admin-user", "letsrun-admin-code-verifier"].forEach(function (k) {
-        window.localStorage.removeItem(k);
-      });
-    } catch (e) { /* none */ }
-    var authStore = {
-      getItem: function (k) { try { return window.sessionStorage.getItem(k); } catch (e) { return null; } },
-      setItem: function (k, v) { try { window.sessionStorage.setItem(k, v); } catch (e) { /* none */ } },
-      removeItem: function (k) { try { window.sessionStorage.removeItem(k); } catch (e) { /* none */ } }
-    };
+    // The admin session is kept in localStorage (shared by the browser's tabs). A tab-only session (sessionStorage,
+    // PRA-27 on 2026-10-21) broke signing in: Supabase's default email has a sign-in link, which opens a new tab, and
+    // the tab that asked for the email never got the session. Every admin call still needs MFA (aal2) on the server.
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: "letsrun-admin",
-        storage: authStore
-      }
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: "letsrun-admin" }
     });
     wireChrome();
-    sb.auth.onAuthStateChange(function (event) {
+    sb.auth.onAuthStateChange(function (event, session) {
       if (event === "SIGNED_OUT") showSignIn();
+      // Signed in from the email's link in another tab (or by the link landing here): this tab goes on to the
+      // authenticator step too, unless it is already in.
+      if (event === "SIGNED_IN" && session && !state.signedIn && !entering) {
+        storageSet(PENDING_KEY, null);
+        enter(session);
+      }
     });
     sb.auth.getSession().then(function (res) {
       var session = res && res.data && res.data.session;
