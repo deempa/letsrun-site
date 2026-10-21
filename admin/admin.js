@@ -1,8 +1,23 @@
+// Frame-buster (PRA-27). GitHub Pages sends no headers and a <meta> CSP can't set frame-ancestors, so nothing stops
+// another site from loading this page in a hidden frame and tricking a signed-in admin into clicks (clickjacking).
+// Inside a frame: blank the page, try to take over the top window, and never start the console (see the first line
+// of the main function below). Longer term: serve /admin from its own subdomain or a host that sends real headers
+// (Content-Security-Policy: frame-ancestors 'none'; X-Frame-Options: DENY), which also keeps its session off the
+// main site's origin.
+(function () {
+  "use strict";
+  if (window.top === window.self) return;
+  try { document.documentElement.style.display = "none"; } catch (e) { /* none */ }
+  try { if (document.body) document.body.textContent = ""; } catch (e) { /* none */ }
+  try { window.top.location = window.self.location.href; } catch (e) { /* a sandboxed or blocked frame: stays blank */ }
+})();
+
 // Admin page for בוא נרוץ (round 24, sketch A; round 38: sketch A on a computer, sketch B on a phone). Static: supabase-js from the CDN, the project's URL and anon key
 // (public by design: the apps ship the same key, and every admin_* RPC checks private.admins on the server).
 // Sign-in: an email one-time code. Rendering builds DOM nodes (textContent only, never innerHTML with data).
 (function () {
   "use strict";
+  if (window.top !== window.self) return; // framed: the frame-buster above has blanked the page
 
   var SUPABASE_URL = "https://hpzekzgcexjuychyobxt.supabase.co";
   var SUPABASE_ANON_KEY =
@@ -2721,8 +2736,23 @@
       show(empty("הדף לא נטען עד הסוף", "בדקו את החיבור ונסו לרענן."));
       return;
     }
+    // The admin session (aal2) lives in sessionStorage (PRA-27): it ends with the tab and is not kept on disk for the
+    // whole letsrun.co.il origin. Sessions saved in localStorage by older versions of this page are removed once.
+    try {
+      ["letsrun-admin", "letsrun-admin-user", "letsrun-admin-code-verifier"].forEach(function (k) {
+        window.localStorage.removeItem(k);
+      });
+    } catch (e) { /* none */ }
+    var authStore = {
+      getItem: function (k) { try { return window.sessionStorage.getItem(k); } catch (e) { return null; } },
+      setItem: function (k, v) { try { window.sessionStorage.setItem(k, v); } catch (e) { /* none */ } },
+      removeItem: function (k) { try { window.sessionStorage.removeItem(k); } catch (e) { /* none */ } }
+    };
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: "letsrun-admin" }
+      auth: {
+        persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: "letsrun-admin",
+        storage: authStore
+      }
     });
     wireChrome();
     sb.auth.onAuthStateChange(function (event) {

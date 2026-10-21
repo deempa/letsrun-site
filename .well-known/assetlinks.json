@@ -1,6 +1,6 @@
 [
   {
     "relation": ["delegate_permission/common.handle_all_urls"],
-    "target": { "namespace": "android_app", "package_name": "com.liorrabanian.letsrun", "sha256_cert_fingerprints": ["A1:02:96:AD:BA:40:DD:11:F8:49:6D:5E:0C:3D:BD:FD:97:FC:D9:84:72:92:8F:C9:6E:96:C5:C1:48:86:03:77"] }
+    "target": { "namespace": "android_app", "package_name": "com.liorrabanian.letsrun", "sha256_cert_fingerprints": ["AC:A0:1B:A8:D6:66:40:4A:28:7E:A4:D5:B2:E2:5D:87:F1:10:7C:0D:AA:7B:16:2A:0E:E7:81:DF:F2:9F:4C:2F", "B5:45:91:A9:89:A2:07:92:9D:AC:27:3B:4C:0E:87:16:54:17:09:57:81:30:27:0F:6F:B1:5F:CF:AC:A5:6F:46", "A1:02:96:AD:BA:40:DD:11:F8:49:6D:5E:0C:3D:BD:FD:97:FC:D9:84:72:92:8F:C9:6E:96:C5:C1:48:86:03:77"] }
   }
 ]

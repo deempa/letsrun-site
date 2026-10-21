@@ -23,7 +23,12 @@
                           change the wording (Q-D3)
        P3 [N] mailbox     how long report emails / deletion requests are kept in the team's mailbox (Q-D3)
        P4 events         resolved in round 25 (contract v27): raw events 400 days, then daily totals only (Q-D5)
-       P5 30 days         deletion by email "as soon as possible, and within 30 days at the latest" (Q-D4) -->
+       P5 30 days         deletion by email "as soon as possible, and within 30 days at the latest" (Q-D4)
+     2026-10-21: PRA-28, an Apple account is deleted by email only after a reply from the address Apple gave us for it
+       (often a privaterelay.appleid.com relay); name and birth year are public, so they are not proof. To email a relay
+       address, letsrun.co.il must be registered in Apple Developer → Sign in with Apple for Email Communication.
+       PRA-37: fixed groups, their chat and the notifications bell added to the lists. -->
+
 <header class="site-header">
   <div class="wrap">
     <a class="brand" href="/"><span class="mark" aria-hidden="true"></span>בוא נרוץ</a>
@@ -34,7 +39,7 @@
   <div class="wrap">
     <p class="eyebrow">בוא נרוץ</p>
     <h1>מחיקת חשבון</h1>
-    <p class="meta">האפליקציה "בוא נרוץ" · מפתח: <span dir="ltr">deempa</span> · עודכן ב־<span class="num">16</span> באוקטובר <span class="num">2026</span></p>
+    <p class="meta">האפליקציה "בוא נרוץ" · מפתח: <span dir="ltr">deempa</span> · עודכן ב־<span class="num">21</span> באוקטובר <span class="num">2026</span></p>
     <div class="body">
       <div class="callout">
         <p><b>בקצרה.</b> מוחקים את החשבון מתוך האפליקציה, בהגדרות. המחיקה מיידית ולצמיתות, באייפון ובאנדרואיד. אין
@@ -53,11 +58,13 @@
 
       <h2 id="by-email">מחיקה במייל</h2>
       <p>אם אין לכם גישה לאפליקציה, או שהחשבון מושעה (חשבון מושעה לא יכול למחוק את עצמו מתוך האפליקציה), שלחו לנו
-        <a href="mailto:support@letsrun.co.il?subject=%D7%91%D7%A7%D7%A9%D7%AA%20%D7%9E%D7%97%D7%99%D7%A7%D7%AA%20%D7%97%D7%A9%D7%91%D7%95%D7%9F&amp;body=%D7%A9%D7%9C%D7%95%D7%9D%2C%0A%D7%90%D7%A0%D7%99%20%D7%9E%D7%91%D7%A7%D7%A9/%D7%AA%20%D7%9C%D7%9E%D7%97%D7%95%D7%A7%20%D7%90%D7%AA%20%D7%94%D7%97%D7%A9%D7%91%D7%95%D7%9F%20%D7%A9%D7%9C%D7%99%20%D7%91%D7%90%D7%A4%D7%9C%D7%99%D7%A7%D7%A6%D7%99%D7%94%20%D7%91%D7%95%D7%90%20%D7%A0%D7%A8%D7%95%D7%A5.%0A%0A%D7%9B%D7%AA%D7%95%D7%91%D7%AA%20%D7%94%D7%9E%D7%99%D7%99%D7%9C%20%D7%A9%D7%9C%20%D7%94%D7%97%D7%A9%D7%91%D7%95%D7%9F%20%28%D7%97%D7%A9%D7%91%D7%95%D7%9F%20Google%29%3A%0A%D7%90%D7%95%2C%20%D7%90%D7%9D%20%D7%A0%D7%9B%D7%A0%D7%A1%D7%AA%D7%99%20%D7%A2%D7%9D%20Apple%3A%20%D7%94%D7%A9%D7%9D%20%D7%94%D7%A4%D7%A8%D7%98%D7%99%20%D7%95%D7%A9%D7%A0%D7%AA%20%D7%94%D7%9C%D7%99%D7%93%D7%94%20%D7%A9%D7%91%D7%A4%D7%A8%D7%95%D7%A4%D7%99%D7%9C%3A%0A%0A%D7%AA%D7%95%D7%93%D7%94">מייל
+        <a href="mailto:support@letsrun.co.il?subject=%D7%91%D7%A7%D7%A9%D7%AA%20%D7%9E%D7%97%D7%99%D7%A7%D7%AA%20%D7%97%D7%A9%D7%91%D7%95%D7%9F&amp;body=%D7%A9%D7%9C%D7%95%D7%9D%2C%0A%D7%90%D7%A0%D7%99%20%D7%9E%D7%91%D7%A7%D7%A9/%D7%AA%20%D7%9C%D7%9E%D7%97%D7%95%D7%A7%20%D7%90%D7%AA%20%D7%94%D7%97%D7%A9%D7%91%D7%95%D7%9F%20%D7%A9%D7%9C%D7%99%20%D7%91%D7%90%D7%A4%D7%9C%D7%99%D7%A7%D7%A6%D7%99%D7%94%20%D7%91%D7%95%D7%90%20%D7%A0%D7%A8%D7%95%D7%A5.%0A%0A%D7%9B%D7%AA%D7%95%D7%91%D7%AA%20%D7%94%D7%9E%D7%99%D7%99%D7%9C%20%D7%A9%D7%9C%20%D7%94%D7%97%D7%A9%D7%91%D7%95%D7%9F%20%28%D7%97%D7%A9%D7%91%D7%95%D7%9F%20Google%29%3A%0A%D7%90%D7%95%2C%20%D7%90%D7%9D%20%D7%A0%D7%9B%D7%A0%D7%A1%D7%AA%D7%99%20%D7%A2%D7%9D%20Apple%3A%20%D7%90%D7%90%D7%A9%D7%A8%20%D7%91%D7%AA%D7%A9%D7%95%D7%91%D7%94%20%D7%9C%D7%9E%D7%99%D7%99%D7%9C%20%D7%A9%D7%AA%D7%A9%D7%9C%D7%97%D7%95%20%D7%9C%D7%9B%D7%AA%D7%95%D7%91%D7%AA%20%D7%A9%D7%9C%20%D7%94%D7%97%D7%A9%D7%91%D7%95%D7%9F.%0A%0A%D7%AA%D7%95%D7%93%D7%94">מייל
         עם הנושא "בקשת מחיקת חשבון"</a> לכתובת <a href="mailto:support@letsrun.co.il"><span dir="ltr">support@letsrun.co.il</span></a>.</p>
       <ul>
         <li><b>נכנסתם עם Google?</b> כתבו את כתובת המייל של חשבון ה־Google, ועדיף לשלוח ממנה.</li>
-        <li><b>נכנסתם עם Apple?</b> לרוב אין לנו את כתובת המייל שלכם. כתבו את השם הפרטי ואת שנת הלידה שבפרופיל.</li>
+        <li><b>נכנסתם עם Apple?</b> נשלח מייל אישור לכתובת ש־Apple מסרה לנו עבור החשבון (לרוב כתובת מוסתרת של Apple
+          שמעבירה אליכם את המייל), ונמחק רק אחרי שתענו לו משם. שם ושנת לידה לא מספיקים, כי הם גלויים לאחרים. אם אין
+          לחשבון כתובת מייל אצלנו, אפשר למחוק אותו רק מתוך האפליקציה.</li>
       </ul>
       <p>נמחק את החשבון בהקדם, ולכל המאוחר תוך <span class="num">30</span> יום, ונאשר לכם במייל. המחיקה במייל מוחקת את
         אותו מידע כמו המחיקה מתוך האפליקציה. אם לא נצליח לזהות את החשבון לפי הפרטים, נשאל אתכם שוב לפני שנמחק משהו.</p>
@@ -68,11 +75,12 @@
         <li><b>התמונות:</b> תמונת הפרופיל ותמונות הכיסוי של ריצות שפתחתם.</li>
         <li><b>המיקום המשוער</b> שנשמר בחשבון.</li>
         <li><b>ריצות קבוצתיות שפתחתם</b>, כולל הצ׳אט שלהן, וההצטרפויות, הבקשות וההזמנות שלכם לריצות של אחרים.</li>
-        <li><b>ההודעות שכתבתם</b> בצ׳אטים של ריצות.</li>
+        <li><b>ההודעות שכתבתם</b> בצ׳אטים של ריצות ושל קבוצות קבועות.</li>
+        <li><b>החברות בקבוצות קבועות</b> וההזמנות שלכם אליהן. קבוצה שנשארים בה פחות משלושה חברים נסגרת.</li>
         <li><b>החיבורים</b> עם רצים אחרים, בשני הכיוונים, וקישור ההזמנה האישי.</li>
         <li><b>הריצות האישיות</b> שתיעדתם או ייבאתם, כולל מסלולים ודופק.</li>
         <li><b>משוב אחרי ריצה</b>, החסימות והדיווחים שלכם, דיווחים עליכם ורמת האמון.</li>
-        <li><b>מזהי ההתראות</b> (Push) של המכשירים שלכם והעדפות ההתראה.</li>
+        <li><b>מזהי ההתראות</b> (Push) של המכשירים שלכם, העדפות ההתראה וההתראות בפעמון.</li>
         <li><b>נתוני שימוש</b> (פעולות באפליקציה, בלי טקסט ובלי מיקום) מנותקים מהחשבון ונשארים אנונימיים בלבד, עד
           שהם נמחקים אחרי <span class="num">400</span> ימים. אחר כך נשארים רק סיכומים יומיים, בלי זיהוי.</li>
       </ul>
@@ -88,6 +96,8 @@
           (Google), עם מזהה פנימי של החשבון ובלי שם או מייל, נמחקים אצל Google לפי תקופת השמירה שלה, כ־<span
           class="num">90</span> יום.</li>
         <li><b>גיבויים.</b> פעם ביום נשמר עותק גיבוי מוצפן של מסד הנתונים, וכל עותק נמחק אוטומטית אחרי <span class="num">30</span> יום. לכן המידע של החשבון נעלם גם מהגיבויים תוך <span class="num">30</span> יום מהמחיקה לכל היותר.</li>
+        <li><b>התראות אצל אחרים.</b> התראה בפעמון של משתמש אחר על פעולה שלכם (למשל הצטרפות לריצה שלו) נשארת אצלו, בלי
+          הפרופיל שלכם, עד שהיא נמחקת אחרי <span class="num">30</span> יום.</li>
         <li><b>ריצות ששמרתם ב־Apple Health או ב־Health Connect</b> נשארות במכשיר שלכם, ומוחקים אותן משם.</li>
       </ul>
       <p>מחיקת החשבון לא מוחקת את חשבון ה־Apple או ה־Google שאיתו נכנסתם.</p>
@@ -108,19 +118,24 @@
           under <b>חשבון</b> (Account) tap <b>מחיקת חשבון</b> (Delete account) → confirm with <b>מחיקה לצמיתות</b>
           (Delete permanently). The account is deleted immediately and cannot be restored.</p>
         <p><b>Without the app, or if the account is suspended:</b> email
-          <a href="mailto:support@letsrun.co.il?subject=%D7%91%D7%A7%D7%A9%D7%AA%20%D7%9E%D7%97%D7%99%D7%A7%D7%AA%20%D7%97%D7%A9%D7%91%D7%95%D7%9F&amp;body=Hello%2C%0APlease%20delete%20my%20Let%27s%20Run%20%28%D7%91%D7%95%D7%90%20%D7%A0%D7%A8%D7%95%D7%A5%29%20account.%0A%0AAccount%20email%20%28Google%20sign-in%29%3A%0AOr%2C%20if%20I%20signed%20in%20with%20Apple%2C%20the%20first%20name%20and%20birth%20year%20on%20my%20profile%3A%0A%0AThank%20you">support@letsrun.co.il</a>
-          with the subject "בקשת מחיקת חשבון" (account deletion request) and the account's Google email, or, for Apple
-          sign-in, the first name and birth year on the profile. We delete it as soon as possible, and within 30 days at
-          the latest, and confirm by email.</p>
+          <a href="mailto:support@letsrun.co.il?subject=%D7%91%D7%A7%D7%A9%D7%AA%20%D7%9E%D7%97%D7%99%D7%A7%D7%AA%20%D7%97%D7%A9%D7%91%D7%95%D7%9F&amp;body=Hello%2C%0APlease%20delete%20my%20Let%27s%20Run%20%28%D7%91%D7%95%D7%90%20%D7%A0%D7%A8%D7%95%D7%A5%29%20account.%0A%0AAccount%20email%20%28Google%20sign-in%29%3A%0AOr%2C%20if%20I%20signed%20in%20with%20Apple%3A%20I%20will%20confirm%20by%20replying%20to%20your%20email%20to%20the%20account%27s%20address.%0A%0AThank%20you">support@letsrun.co.il</a>
+          with the subject "בקשת מחיקת חשבון" (account deletion request) and the account's Google email. For Apple
+          sign-in, we email a confirmation to the address Apple gave us for the account (often an Apple relay address
+          that forwards to you) and delete only after you reply to it; name and birth year are not enough, since others
+          can see them. An Apple account with no email on file can be deleted only in the app. We delete it as soon as
+          possible, and within 30 days at the latest, and confirm by email.</p>
         <p><b>Deleted:</b> profile (name, birth year, bio, neighbourhood, preferences, availability, races), profile photo
           and run cover photos, approximate location, group runs you created with their chats, your joins, requests and
-          invites, your chat messages, connections, personal runs (routes, heart rate), feedback, blocks and reports,
-          trust level, push tokens and notification settings. Usage events are unlinked from the account and kept only
+          invites, your run chat and fixed-group chat messages, fixed-group memberships and invites, connections,
+          personal runs (routes, heart rate), feedback, blocks and reports, trust level, push tokens, notification
+          settings and the notifications in your bell. Usage events are unlinked from the account and kept only
           anonymously, then deleted after 400 days, leaving only daily totals with no identity.</p>
         <p><b>Kept:</b> the team's moderation log entries about the account (e.g. a suspension and its reason, or content
           the team removed), stored with an internal account ID and no profile, for appeals, abuse prevention and legal
           obligations, for up to 90 days; crash reports already sent to Firebase Crashlytics (Google), with an internal account ID
           and no name or email, until Google deletes them (about 90 days); report emails and deletion requests in the team's mailbox for up to 90 days.
+          Another user's bell notification about something you did stays with them, without your profile, until it is
+          deleted after 30 days.
           An encrypted copy of the database is made once a day and deleted automatically after 30 days, so the account's data also leaves the backups within 30 days of deletion. Runs you saved to Apple
           Health or Health Connect stay on your device.</p>
       </section>
