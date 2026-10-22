@@ -68,7 +68,11 @@
     ["events", "נתוני שימוש מהאפליקציה"],
     ["crew_create", "קבוצות חדשות"],
     ["crew_invite", "הזמנות לקבוצה"],
-    ["crew_rename", "שינויי שם של קבוצה"]
+    ["crew_rename", "שינויי שם של קבוצה"],
+    ["crew_link_join", "הצטרפות לקבוצה בקישור"],
+    ["crew_schedule", "שינויים בריצה הקבועה"],
+    ["activity_insert", "שמירת ריצות"],
+    ["meeting_points", "חיפושי ״איפה נפגשים?״"]
   ];
   var CONFIG = {
     min_version_ios: "iOS · גרסה מינימלית",

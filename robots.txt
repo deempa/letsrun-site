@@ -2,5 +2,6 @@ User-agent: *
 Disallow: /admin/
 Disallow: /c/
 Disallow: /r/
+Disallow: /g/
 
 Sitemap: https://letsrun.co.il/sitemap.xml
