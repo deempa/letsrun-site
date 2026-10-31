@@ -48,7 +48,9 @@
     race_hidden: "מרוץ הוסתר",
     race_shown: "מרוץ הוצג שוב",
     user_deleted: "מחיקת חשבון",
-    test_push: "התראת בדיקה"
+    test_push: "התראת בדיקה",
+    offer_save: "שמירת הטבה או אירוע",
+    offer_status: "שינוי מצב של הטבה או אירוע"
   };
   var PLATFORMS = { ios: "iPhone", android: "Android" };
   // The word typed to confirm a deletion.
@@ -72,7 +74,8 @@
     ["crew_link_join", "הצטרפות לקבוצה בקישור"],
     ["crew_schedule", "שינויים בריצה הקבועה"],
     ["activity_insert", "שמירת ריצות"],
-    ["meeting_points", "חיפושי ״איפה נפגשים?״"]
+    ["meeting_points", "חיפושי ״איפה נפגשים?״"],
+    ["offer_event", "פתיחות, העתקות קוד ולחיצות על הטבות"]
   ];
   var CONFIG = {
     min_version_ios: "iOS · גרסה מינימלית",
@@ -565,9 +568,9 @@
 
   // A computer gets the side menu and starts on "מבט על"; a phone gets the bottom tabs and starts on "משימות".
   var WIDE = window.matchMedia("(min-width: 960px)");
-  var TABS = ["overview", "inbox", "users", "runs", "log", "words", "settings", "more"];
+  var TABS = ["overview", "inbox", "users", "runs", "log", "words", "settings", "offers", "more"];
   // On a phone these live under "עוד".
-  var UNDER_MORE = { overview: true, log: true, words: true, settings: true };
+  var UNDER_MORE = { overview: true, log: true, words: true, settings: true, offers: true };
 
   function setTab(tab) {
     state.tab = tab;
@@ -598,6 +601,7 @@
     if (tab === "runs") return renderRuns();
     if (tab === "words") return renderWords();
     if (tab === "settings") return renderSettings();
+    if (tab === "offers") return renderOffers();
     if (tab === "more") return renderMore();
     return renderLog(true);
   }
@@ -953,6 +957,12 @@
     }
     if (l.action === "test_push" && l.context) {
       what += Number(l.context.devices) ? " · " + (Number(l.context.devices) === 1 ? "מכשיר אחד" : l.context.devices + " מכשירים") : " · אין מכשיר";
+    }
+    if ((l.action === "offer_save" || l.action === "offer_status") && l.context) {
+      var offerStatus = { draft: "טיוטה", published: "פורסם", archived: "ארכיון" };
+      if (l.action === "offer_save") what += " · " + (OFFER_KIND[l.context.kind] || "") + " · " + (offerStatus[l.context.status] || l.context.status || "");
+      else what += " · " + (offerStatus[l.context.from] || l.context.from) + " ← " + (offerStatus[l.context.to] || l.context.to);
+      if (Number(l.context.pushes)) what += " · " + (Number(l.context.pushes) === 1 ? "התראה אחת" : fmt(l.context.pushes) + " התראות");
     }
     if (l.action === "app_config_set" && l.context) {
       what += " · " + (CONFIG[l.context.key] || l.context.key) + ": " + configText(l.context.previous) + " ← " + configText(l.context.value);
@@ -2675,6 +2685,608 @@
     });
   }
 
+  // ------------------------------------------------------------------ הטבות ואירועים (round 57, v56) ---
+  // admin_offers / admin_save_offer / admin_set_offer_status. The composer on one side, the app's card as a live preview
+  // on the other, and every offer below it, grouped by state with the four counts (unique runners). Images go to the
+  // offer-images bucket (admins with aal2 only), downscaled in the browser to a 1600 px wide JPEG first.
+
+  var OFFER_KINDS = [["offer", "הטבה"], ["event", "אירוע"], ["update", "עדכון"]];
+  var OFFER_KIND = { offer: "הטבה", event: "אירוע", update: "עדכון" };
+  var OFFER_STATES = [["draft", "טיוטות"], ["live", "פעילות"], ["scheduled", "מתוזמנות"], ["ended", "הסתיימו"],
+    ["archived", "בארכיון"]];
+  var OFFER_STATE = { draft: "טיוטה", live: "פעילה", scheduled: "מתוזמנת", ended: "הסתיימה", archived: "בארכיון" };
+  var OFFER_RADII = [5, 10, 20, 50];
+  // City centres for the audience (approximate; a radius is drawn around them).
+  var OFFER_CITIES = [
+    ["תל אביב", 32.0853, 34.7818], ["ירושלים", 31.7683, 35.2137], ["חיפה", 32.794, 34.9896],
+    ["באר שבע", 31.252, 34.7915], ["ראשון לציון", 31.973, 34.7925], ["פתח תקווה", 32.084, 34.8878],
+    ["אשדוד", 31.8014, 34.6435], ["נתניה", 32.3215, 34.8532], ["חולון", 32.0158, 34.7874],
+    ["רמת גן", 32.0684, 34.8248], ["גבעתיים", 32.0722, 34.8125], ["בת ים", 32.0132, 34.748],
+    ["רחובות", 31.8928, 34.8113], ["נס ציונה", 31.9293, 34.7987], ["אשקלון", 31.6688, 34.5743],
+    ["הרצליה", 32.1624, 34.8447], ["רמת השרון", 32.146, 34.839], ["רעננה", 32.1848, 34.8713],
+    ["כפר סבא", 32.175, 34.907], ["הוד השרון", 32.15, 34.888], ["מודיעין", 31.898, 35.0104],
+    ["חדרה", 32.434, 34.9196], ["עפולה", 32.6074, 35.2892], ["נצרת", 32.6996, 35.3035],
+    ["כרמיאל", 32.919, 35.295], ["טבריה", 32.7922, 35.5312], ["אילת", 29.5577, 34.9519]
+  ];
+  var OFFER_IMAGE_MAX_W = 1600;
+  var OFFER_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+  // admin_save_offer's details (English, from the server) in Hebrew.
+  var OFFER_DETAILS = [
+    [/^kind/, "צריך לבחור סוג: הטבה, אירוע או עדכון."],
+    [/^title/, "הכותרת: 2 עד 80 תווים."],
+    [/^body/, "הטקסט: עד 500 תווים."],
+    [/^business_name/, "שם בית העסק: עד 60 תווים."],
+    [/^address/, "הכתובת: עד 100 תווים."],
+    [/^code is for offers/, "קוד הנחה מתאים רק להטבה."],
+    [/^code/, "קוד ההנחה: עד 40 תווים, בלי רווחים."],
+    [/^link_url/, "הקישור צריך להתחיל ב־https:// (עד 300 תווים)."],
+    [/^image_url/, "התמונה צריכה לעלות מכאן (offer-images)."],
+    [/^event_at is required/, "לאירוע צריך תאריך ושעה."],
+    [/^event_at/, "תאריך ושעה מתאימים רק לאירוע."],
+    [/^sponsored/, "״בית העסק משלם״ צריך שם של בית עסק."],
+    [/^an area|^area_label|^lat|^radius/, "האזור: עיר ורדיוס של 1 עד 100 ק״מ, או כל הארץ."],
+    [/^ends_at is required/, "חסר תאריך סיום."],
+    [/^ends_at/, "הסיום צריך להיות אחרי ההתחלה."],
+    [/^status/, "אפשר לשמור רק כטיוטה או לפרסם."]
+  ];
+
+  var offers = { rows: [], token: 0, form: null, editing: null, ui: null, uploading: false };
+
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  // A datetime-local / date / time value (this browser's time zone) ↔ ISO.
+  function localParts(iso) {
+    if (!iso) return { date: "", time: "", both: "" };
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return { date: "", time: "", both: "" };
+    var date = d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+    var time = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    return { date: date, time: time, both: date + "T" + time };
+  }
+  function localIso(v) {
+    if (!v) return null;
+    var d = new Date(v);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  function dM(iso) {
+    var d = new Date(iso);
+    return isNaN(d.getTime()) ? "" : d.toLocaleDateString("he-IL", { day: "numeric", month: "numeric", timeZone: "Asia/Jerusalem" });
+  }
+  function offerDays(o) {
+    if (o.kind === "event" && o.event_at) return dayLabel(o.event_at) + " " + clock(new Date(o.event_at));
+    return dM(o.starts_at) + "–" + dM(o.ends_at);
+  }
+  function offerAudience(o) {
+    return o.area_label ? o.area_label + " · " + fmt(o.radius_km) + " ק״מ" : "כל הארץ";
+  }
+  function offerDetail(e) {
+    var d = String((e && e.details) || "");
+    for (var i = 0; i < OFFER_DETAILS.length; i++) if (OFFER_DETAILS[i][0].test(d)) return OFFER_DETAILS[i][1];
+    if (e && /offer_not_found/.test(String(e.message || ""))) return "הפרסום כבר לא קיים. רעננו את הרשימה.";
+    return null;
+  }
+
+  // A new composer state, or one filled from an admin_offers row.
+  function offerForm(o) {
+    if (!o) {
+      var end = new Date(Date.now() + 14 * DAY);
+      end.setHours(23, 59, 0, 0);
+      return { id: null, kind: "offer", title: "", body: "", business_name: "", address: "", code: "", link_url: "",
+        image_url: "", event_date: "", event_time: "19:00", sponsored: false, city: "", radius_km: 10, starts: "",
+        ends: localParts(end.toISOString()).both, endsTouched: false, push_requested: false, pushed_at: null, status: "draft",
+        state: null };
+    }
+    var ev = localParts(o.event_at);
+    var city = "";
+    if (o.area_label) {
+      city = o.area_label;
+      var known = OFFER_CITIES.some(function (c) { return c[0] === o.area_label; });
+      if (!known) OFFER_CITIES.push([o.area_label, o.lat, o.lon]);
+    }
+    return { id: o.id, kind: o.kind, title: o.title || "", body: o.body || "", business_name: o.business_name || "",
+      address: o.address || "", code: o.code || "", link_url: o.link_url || "", image_url: o.image_url || "",
+      event_date: ev.date, event_time: ev.time || "19:00", sponsored: !!o.sponsored, city: city,
+      radius_km: o.radius_km || 10, starts: localParts(o.starts_at).both, ends: localParts(o.ends_at).both, endsTouched: true,
+      push_requested: !!o.push_requested, pushed_at: o.pushed_at, status: o.status, state: o.state };
+  }
+
+  function renderOffers() {
+    offers.form = offers.form || offerForm(null);
+    var listBox = h("div", { class: "of-list", id: "offer-list" }, skeleton("טוענים הטבות…"));
+    var formBox = h("div", { id: "offer-form" });
+    var previewBox = h("div", { class: "card of-preview-card", id: "offer-preview" });
+    offers.ui = { list: listBox, form: formBox, preview: previewBox };
+    show(pageHead("הטבות ואירועים", null,
+        h("button", { type: "button", class: "btn ink", onclick: function () { editOffer(null); } }, "פרסום חדש")),
+      h("div", { class: "of-grid" }, formBox, h("div", { class: "of-side" }, previewBox)),
+      listBox);
+    drawOfferForm();
+    loadOffers();
+  }
+
+  function loadOffers() {
+    var token = ++offers.token;
+    return rpc("admin_offers").then(function (rows) {
+      if (token !== offers.token || state.tab !== "offers" || !offers.ui) return;
+      offers.rows = rows || [];
+      drawOfferList();
+      // The open offer may have moved (published, paused, ended): keep its state chip right.
+      if (offers.form && offers.form.id) {
+        var cur = offers.rows.filter(function (r) { return r.id === offers.form.id; })[0];
+        if (cur) { offers.form.state = cur.state; offers.form.status = cur.status; offers.form.pushed_at = cur.pushed_at; drawOfferActions(); }
+      }
+    }).catch(function (e) {
+      if (token !== offers.token || !offers.ui) return;
+      fill(offers.ui.list, missingRpc(e)
+        ? empty("השרת עוד לא עודכן", "ההטבות יופיעו אחרי שעדכון v56 יורץ ב־Supabase.")
+        : retryBox("לא הצלחנו לטעון את ההטבות.", loadOffers));
+      if (!missingRpc(e)) fail(e);
+    });
+  }
+
+  function drawOfferList() {
+    var box = offers.ui.list;
+    if (!offers.rows.length) {
+      fill(box, emptyNote("הטבה, אירוע או עדכון שתפרסמו יופיעו כאן, עם כמה רצים ראו ולחצו.",
+        "M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 8v10", "עוד אין פרסומים"));
+      return;
+    }
+    var groups = OFFER_STATES.map(function (s) {
+      var rows = offers.rows.filter(function (r) { return r.state === s[0]; });
+      if (!rows.length) return null;
+      return h("section", { class: "of-group", "aria-label": s[1] },
+        h("h2", { class: "section-title" }, s[1], " ", h("span", { class: "page-count num", dir: "ltr", text: fmt(rows.length) })),
+        h("div", { class: "run-list" }, rows.map(offerRow)));
+    });
+    fill(box, groups);
+  }
+
+  function offerCount(label, n, na) {
+    return h("span", { class: "of-count" + (na ? " na" : "") },
+      na ? h("span", { class: "num", text: "—" }) : num(n), h("span", { text: label }));
+  }
+
+  function offerRow(o) {
+    var on = offers.form && offers.form.id === o.id;
+    return h("button", { type: "button", class: "of-row" + (on ? " on" : ""), "aria-current": on ? "true" : null,
+        onclick: function () { editOffer(o); } },
+      h("span", { class: "of-row-main" },
+        h("span", { class: "run-title", text: (on ? "✓ " : "") + o.title }),
+        h("span", { class: "run-sub", text: [OFFER_KIND[o.kind] || o.kind, offerDays(o), offerAudience(o)].join(" · ") }),
+        h("span", { class: "chips" },
+          o.sponsored ? h("span", { class: "chip info", text: "בשיתוף " + (o.business_name || "") }) : null,
+          o.pushed_at ? h("span", { class: "chip ok", text: "התראה נשלחה " + dM(o.pushed_at) }) :
+            (o.push_requested && o.status === "published" && o.state === "scheduled"
+              ? h("span", { class: "chip", text: "התראה בתחילת התוקף" }) : null))),
+      h("span", { class: "of-counts" },
+        offerCount("נראו", o.seen_count),
+        offerCount("נפתחו", o.open_count),
+        offerCount("העתיקו קוד", o.copy_count, !o.code),
+        offerCount("לחצו על הקישור", o.link_count, !o.link_url)));
+  }
+
+  function editOffer(o) {
+    if (offers.uploading) return toast("עוד מעלים את התמונה. רגע.");
+    if (offers.form && offers.form.dirty) {
+      return askYes({ title: "לעזוב בלי לשמור?", text: "השינויים בטופס לא נשמרו.", ok: "לעזוב" }).then(function (yes) {
+        if (yes) { offers.form.dirty = false; editOffer(o); }
+      });
+    }
+    offers.form = offerForm(o);
+    drawOfferForm();
+    if (offers.rows.length) drawOfferList();
+    view().focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+  }
+
+  // The composer. Inputs write offers.form; every change redraws the preview only.
+  function drawOfferForm() {
+    var f = offers.form;
+    var box = offers.ui.form;
+    var err = h("p", { class: "form-error", id: "offer-error", role: "alert", hidden: true });
+    var changed = function () { f.dirty = true; drawOfferPreview(); err.hidden = true; };
+    var text = function (key, label, o) {
+      o = o || {};
+      var input = h(o.area ? "textarea" : "input", { id: "of-" + key, maxlength: o.max, dir: o.ltr ? "ltr" : null,
+        rows: o.area ? 3 : null, type: o.area ? null : (o.type || "text"), inputmode: o.inputmode || null,
+        placeholder: o.placeholder || null, autocomplete: "off", spellcheck: o.ltr ? "false" : null });
+      input.value = f[key] || "";
+      input.addEventListener("input", function () { f[key] = input.value; changed(); });
+      return h("label", { class: "field" + (o.span ? " span2" : ""), hidden: o.hidden || null, "data-field": key },
+        h("span", { class: "label", text: label }), input, o.hint ? h("span", { class: "note", text: o.hint }) : null);
+    };
+
+    var kinds = h("div", { class: "seg", role: "group", "aria-label": "סוג" }, OFFER_KINDS.map(function (k) {
+      return h("button", { type: "button", "aria-pressed": f.kind === k[0] ? "true" : "false", onclick: function () {
+        f.kind = k[0];
+        f.dirty = true;
+        if (f.kind !== "offer") f.code = "";
+        drawOfferForm();
+      } }, (f.kind === k[0] ? "✓ " : "") + k[1]);
+    }));
+
+    var evDate = h("input", { type: "date", id: "of-event-date" });
+    evDate.value = f.event_date;
+    var evTime = h("input", { type: "time", id: "of-event-time", step: 300 });
+    evTime.value = f.event_time;
+    var syncEnd = function () {
+      // An event ends, by default, at the end of its day (until the end date is changed by hand).
+      if (!f.endsTouched && f.event_date) {
+        f.ends = f.event_date + "T23:59";
+        if ($("of-ends")) $("of-ends").value = f.ends;
+      }
+    };
+    evDate.addEventListener("input", function () { f.event_date = evDate.value; syncEnd(); changed(); });
+    evTime.addEventListener("input", function () { f.event_time = evTime.value; changed(); });
+
+    // Audience: the whole country, or a city and a radius.
+    var cityMode = !!f.city;
+    var citySel = h("select", { id: "of-city", "aria-label": "עיר" },
+      h("option", { value: "" }, "בחירת עיר…"),
+      OFFER_CITIES.map(function (c) { return h("option", { value: c[0], selected: c[0] === f.city }, c[0]); }));
+    citySel.addEventListener("change", function () { f.city = citySel.value; changed(); });
+    var aud = h("div", { class: "filters", role: "group", "aria-label": "מי רואה" },
+      h("button", { type: "button", "aria-pressed": cityMode ? "false" : "true", onclick: function () { f.city = ""; f.dirty = true; drawOfferForm(); } },
+        (cityMode ? "" : "✓ ") + "כל הארץ"),
+      h("button", { type: "button", "aria-pressed": cityMode ? "true" : "false", onclick: function () {
+        if (!f.city) f.city = OFFER_CITIES[0][0];
+        f.dirty = true;
+        drawOfferForm();
+      } }, (cityMode ? "✓ " : "") + "עיר ורדיוס"));
+    var radii = h("div", { class: "filters", role: "group", "aria-label": "רדיוס" }, OFFER_RADII.map(function (r) {
+      var on = Number(f.radius_km) === r;
+      return h("button", { type: "button", "aria-pressed": on ? "true" : "false", onclick: function () { f.radius_km = r; f.dirty = true; drawOfferForm(); } },
+        (on ? "✓ " : "") + r + " ק״מ");
+    }));
+
+    var starts = h("input", { type: "datetime-local", id: "of-starts" });
+    starts.value = f.starts;
+    starts.addEventListener("input", function () { f.starts = starts.value; changed(); });
+    var ends = h("input", { type: "datetime-local", id: "of-ends" });
+    ends.value = f.ends;
+    ends.addEventListener("input", function () { f.ends = ends.value; f.endsTouched = true; changed(); });
+
+    var check = function (key, title, sub, disabled) {
+      var cb = h("input", { type: "checkbox", id: "of-" + key, disabled: disabled || null });
+      cb.checked = !!f[key];
+      cb.addEventListener("change", function () { f[key] = cb.checked; changed(); });
+      return h("label", { class: "of-check" }, cb, h("span", null, h("b", { text: title }), h("span", { class: "note", text: sub })));
+    };
+    var pushed = !!f.pushed_at;
+
+    var fields = h("div", { class: "of-fields" },
+      text("title", "כותרת", { span: true, max: 80, placeholder: f.kind === "event" ? "ריצת לילה ב[מקום]" : "15% הנחה על נעלי ריצה" }),
+      text("body", "טקסט", { span: true, area: true, max: 500 }),
+      text("business_name", f.kind === "event" ? "מי מארגן" : "בית העסק", { max: 60 }),
+      text("address", f.kind === "event" ? "מקום" : "כתובת", { max: 100 }),
+      f.kind === "offer" ? text("code", "קוד הנחה", { max: 40, ltr: true, hint: "בלי רווחים. לא חובה." }) : null,
+      text("link_url", f.kind === "event" ? "קישור להרשמה" : "קישור", { max: 300, ltr: true, type: "url", inputmode: "url",
+        placeholder: "https://" }),
+      f.kind === "event"
+        ? h("div", { class: "field span2" }, h("span", { class: "label", text: "מתי האירוע" }),
+          h("div", { class: "of-pair" }, evDate, evTime))
+        : null);
+
+    var imgBox = h("div", { class: "of-image", id: "of-image" });
+    drawOfferImage(imgBox);
+
+    var actions = h("div", { class: "actions of-actions", id: "of-actions" });
+
+    fill(box, h("form", { class: "card of-form", novalidate: true, onsubmit: function (ev) { ev.preventDefault(); saveOffer("published"); } },
+      h("div", { class: "of-form-head" },
+        h("h2", { class: "settings-title", text: f.id ? "עריכת פרסום" : "פרסום חדש" }),
+        f.state ? h("span", { class: "chip status", text: OFFER_STATE[f.state] || f.state }) : null),
+      kinds,
+      fields,
+      imgBox,
+      h("div", { class: "field" }, h("span", { class: "label", text: "מי רואה" }), aud,
+        cityMode ? h("div", { class: "of-area" }, h("span", { class: "select of-city" }, citySel, svg("M7 10l5 5 5-5")), radii) : null),
+      h("div", { class: "of-pair" },
+        h("label", { class: "field" }, h("span", { class: "label", text: "מתחיל" }), starts,
+          h("span", { class: "note", text: f.id ? "" : "ריק = מרגע הפרסום" })),
+        h("label", { class: "field" }, h("span", { class: "label", text: "נגמר" }), ends)),
+      check("sponsored", "בית העסק משלם על הפרסום", "הכרטיס יסומן ״בשיתוף " + (f.business_name.trim() || "[שם בית העסק]") + "״."),
+      check("push_requested", "לשלוח גם התראה",
+        pushed ? "ההתראה כבר נשלחה (" + stamp(f.pushed_at) + "). פרסום נשלח בהתראה פעם אחת בלבד."
+          : "רק למי שהפעיל ״הטבות ואירועים״ בהגדרות ונמצא באזור. עד התראה אחת בשבוע.", pushed),
+      err,
+      actions));
+    drawOfferActions();
+    drawOfferPreview();
+  }
+
+  function drawOfferActions() {
+    var box = $("of-actions");
+    if (!box) return;
+    var f = offers.form;
+    var published = f.id && f.status === "published";
+    fill(box,
+      h("button", { type: "submit", class: "btn ink", id: "of-publish" }, published ? "שמירה ופרסום" : "פרסום"),
+      h("button", { type: "button", class: "btn quiet", onclick: function () { saveOffer("draft"); } },
+        published ? "שמירה כטיוטה" : "שמירת טיוטה"),
+      published ? h("button", { type: "button", class: "btn outline", onclick: function () { setOfferStatus(f.id, "draft"); } }, "הפסקה") : null,
+      f.id && f.status !== "archived"
+        ? h("button", { type: "button", class: "btn text", onclick: function () { setOfferStatus(f.id, "archived"); } }, "העברה לארכיון")
+        : null);
+  }
+
+  function drawOfferImage(box) {
+    var f = offers.form;
+    var input = h("input", { type: "file", accept: "image/jpeg,image/png,image/webp", class: "sr-only", id: "of-file" });
+    input.addEventListener("change", function () {
+      var file = input.files && input.files[0];
+      input.value = "";
+      if (file) uploadOfferImage(file);
+    });
+    fill(box,
+      h("label", { class: "of-thumb" + (f.image_url ? " has" : ""), for: "of-file" },
+        offers.uploading ? h("span", { text: "מעלים…" })
+          : f.image_url ? h("img", { src: f.image_url, alt: "התמונה של הפרסום", referrerpolicy: "no-referrer" })
+          : h("span", { text: "תמונה" })),
+      input,
+      h("span", { class: "of-image-text" },
+        h("span", { class: "note", text: "תמונה רחבה. מוקטנת ל־1600 פיקסלים ונשמרת כ־JPEG, עד 2MB. בלי תמונה מופיע צבע." }),
+        h("span", { class: "of-image-btns" },
+          h("label", { class: "btn quiet small", for: "of-file" }, f.image_url ? "החלפה" : "בחירת תמונה"),
+          f.image_url ? h("button", { type: "button", class: "btn text small", onclick: function () {
+            f.image_url = "";
+            f.dirty = true;
+            drawOfferImage(box);
+            drawOfferPreview();
+          } }, "הסרה") : null)));
+  }
+
+  // Downscales to at most 1600 px wide and encodes JPEG (lower quality until it is under 2 MB).
+  function downscaleImage(file) {
+    return new Promise(function (resolve, reject) {
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return reject(new Error("type"));
+      var reader = new FileReader();
+      reader.onerror = function () { reject(new Error("read")); };
+      reader.onload = function () {
+        var img = new Image();
+        img.onerror = function () { reject(new Error("decode")); };
+        img.onload = function () {
+          var w = Math.min(OFFER_IMAGE_MAX_W, img.naturalWidth || img.width);
+          var hgt = Math.round((img.naturalHeight || img.height) * w / (img.naturalWidth || img.width));
+          var canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = hgt;
+          var ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, w, hgt);
+          ctx.drawImage(img, 0, 0, w, hgt);
+          var qualities = [0.85, 0.75, 0.6, 0.45];
+          var tryAt = function (i) {
+            canvas.toBlob(function (blob) {
+              if (!blob) return reject(new Error("encode"));
+              if (blob.size <= OFFER_IMAGE_MAX_BYTES || i === qualities.length - 1) {
+                return blob.size <= OFFER_IMAGE_MAX_BYTES ? resolve(blob) : reject(new Error("size"));
+              }
+              tryAt(i + 1);
+            }, "image/jpeg", qualities[i]);
+          };
+          tryAt(0);
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function uploadOfferImage(file) {
+    var f = offers.form;
+    var box = $("of-image");
+    offers.uploading = true;
+    if (box) drawOfferImage(box);
+    var month = new Date().toISOString().slice(0, 7);
+    var rand = window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID()
+      : String(Date.now()) + "-" + Math.floor(Math.random() * 1e9);
+    var path = month + "/" + rand + ".jpg";
+    downscaleImage(file).then(function (blob) {
+      return sb.storage.from("offer-images").upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000", upsert: false });
+    }).then(function (res) {
+      if (res && res.error) throw res.error;
+      var pub = sb.storage.from("offer-images").getPublicUrl(path);
+      f.image_url = pub && pub.data && pub.data.publicUrl ? pub.data.publicUrl : "";
+      f.dirty = true;
+    }).catch(function (e) {
+      var m = String((e && e.message) || "");
+      if (m === "type") toast("אפשר להעלות JPEG, PNG או WebP.");
+      else if (m === "size") toast("התמונה גדולה מדי גם אחרי הקטנה. אפשר לנסות תמונה אחרת.");
+      else if (m === "decode" || m === "read") toast("לא הצלחנו לקרוא את התמונה.");
+      else if (/row-level security|unauthorized|403/i.test(m)) toast("אין הרשאה להעלות. צריך כניסה עם קוד מאפליקציית האימות.");
+      else toast("ההעלאה נכשלה. אפשר לנסות שוב.");
+    }).then(function () {
+      offers.uploading = false;
+      if (offers.form === f && $("of-image")) { drawOfferImage($("of-image")); drawOfferPreview(); }
+    });
+  }
+
+  // The app's card (canvas board B1 / Main): a hero (the image, or a colour), the kind, title, meta line, sponsor line.
+  function drawOfferPreview() {
+    var box = offers.ui && offers.ui.preview;
+    if (!box) return;
+    var f = offers.form;
+    var title = f.title.trim() || (f.kind === "event" ? "שם האירוע" : f.kind === "update" ? "כותרת העדכון" : "כותרת ההטבה");
+    var biz = f.business_name.trim();
+    var addr = f.address.trim();
+    var endIso = localIso(f.ends);
+    var evIso = f.event_date ? localIso(f.event_date + "T" + (f.event_time || "00:00")) : null;
+    var meta;
+    if (f.kind === "event") {
+      meta = [addr || "[מקום]", evIso ? dayLabel(evIso) + " " + clock(new Date(evIso)) : "[מתי]"].join(" · ");
+    } else if (f.kind === "update") {
+      meta = f.body.trim().split("\n")[0].slice(0, 70) || "תחילת הטקסט";
+    } else {
+      meta = [biz || "[בית העסק]", f.city ? "[מרחק]" : null, endIso ? "עד " + dM(endIso) : null].filter(Boolean).join(" · ");
+    }
+    var hero = h("div", { class: "of-hero" });
+    if (f.image_url) hero.appendChild(h("img", { src: f.image_url, alt: "", referrerpolicy: "no-referrer" }));
+    else hero.style.background = TONES[hash(f.id || f.kind) % TONES.length];
+    if (f.kind === "event" && evIso) {
+      var d = new Date(evIso);
+      hero.appendChild(h("span", { class: "of-datetile", "aria-hidden": "true" },
+        h("span", { text: d.toLocaleDateString("he-IL", { month: "short", timeZone: "Asia/Jerusalem" }) }),
+        h("b", { class: "num", text: d.toLocaleDateString("he-IL", { day: "numeric", timeZone: "Asia/Jerusalem" }) })));
+    }
+    hero.appendChild(h("span", { class: "of-tag", text: OFFER_KIND[f.kind] }));
+    fill(box,
+      h("span", { class: "ov-label", text: "תצוגה מקדימה באפליקציה" }),
+      h("div", { class: "of-card" },
+        hero,
+        h("div", { class: "of-card-body" },
+          h("b", { class: "of-card-title", text: title }),
+          h("span", { class: "of-card-meta", text: meta }),
+          f.sponsored && biz ? h("span", { class: "of-card-sponsor", text: "בשיתוף " + biz }) : null)),
+      f.kind === "offer" && f.code.trim()
+        ? h("div", { class: "of-code" }, h("span", { class: "note", text: "קוד ההנחה במסך ההטבה" }),
+          h("b", { dir: "ltr", text: f.code.trim() }))
+        : null,
+      h("span", { class: "note", text: f.city
+        ? "רק מי שנמצא עד " + fmt(f.radius_km) + " ק״מ מ" + f.city + " יראה את זה."
+        : "כל מי שמשתמש באפליקציה יראה את זה." }));
+  }
+
+  function offerPayload(status) {
+    var f = offers.form;
+    var city = f.city ? OFFER_CITIES.filter(function (c) { return c[0] === f.city; })[0] : null;
+    var p = {
+      kind: f.kind,
+      title: f.title.trim(),
+      body: f.body.trim() || null,
+      business_name: f.business_name.trim() || null,
+      address: f.address.trim() || null,
+      code: f.kind === "offer" ? (f.code.trim() || null) : null,
+      link_url: f.link_url.trim() || null,
+      image_url: f.image_url || null,
+      event_at: f.kind === "event" && f.event_date ? localIso(f.event_date + "T" + (f.event_time || "00:00")) : null,
+      sponsored: !!f.sponsored,
+      area_label: city ? city[0] : null,
+      lat: city ? city[1] : null,
+      lon: city ? city[2] : null,
+      radius_km: city ? Number(f.radius_km) : null,
+      starts_at: localIso(f.starts),
+      ends_at: localIso(f.ends),
+      status: status,
+      push_requested: !!f.push_requested
+    };
+    if (f.id) p.id = f.id;
+    return p;
+  }
+
+  // What the form says before it goes to the server (the server checks it all again).
+  function offerProblem(p) {
+    if (p.title.length < 2 || p.title.length > 80) return ["title", "כותרת: 2 עד 80 תווים."];
+    if (p.kind === "event" && !p.event_at) return ["event_at", "לאירוע צריך תאריך ושעה."];
+    if (p.code && /\s/.test(p.code)) return ["code", "קוד ההנחה בלי רווחים."];
+    if (p.link_url && !/^https:\/\/\S+$/.test(p.link_url)) return ["link_url", "הקישור צריך להתחיל ב־https://"];
+    if (p.sponsored && !p.business_name) return ["business_name", "״בית העסק משלם״ צריך שם של בית עסק."];
+    if (offers.form.city && !p.area_label) return ["city", "צריך לבחור עיר, או ״כל הארץ״."];
+    if (!p.ends_at) return ["ends", "חסר תאריך סיום."];
+    var start = p.starts_at ? new Date(p.starts_at).getTime() : Date.now();
+    if (new Date(p.ends_at).getTime() <= start) return ["ends", "הסיום צריך להיות אחרי ההתחלה."];
+    return null;
+  }
+
+  function offerError(text, key) {
+    var err = $("offer-error");
+    if (!err) return toast(text);
+    err.textContent = text;
+    err.hidden = false;
+    var input = key ? $("of-" + key) : null;
+    if (input && input.focus) input.focus();
+  }
+
+  function saveOffer(status) {
+    if (offers.uploading) return offerError("עוד מעלים את התמונה. רגע.");
+    var f = offers.form;
+    var p = offerPayload(status);
+    var bad = offerProblem(p);
+    if (bad) return offerError(bad[1], bad[0] === "event_at" ? "event-date" : bad[0]);
+    var willPush = status === "published" && p.push_requested && !f.pushed_at;
+    var ask = willPush
+      ? askYes({
+        title: "לפרסם ולשלוח התראה?",
+        text: (p.starts_at && new Date(p.starts_at).getTime() > Date.now()
+          ? "ההתראה תצא כשהתוקף יתחיל (" + stamp(p.starts_at) + ")"
+          : "ההתראה תצא עכשיו") + " למי שהפעיל ״הטבות ואירועים״" + (p.area_label ? " ונמצא עד " + p.radius_km + " ק״מ מ" + p.area_label : "") +
+          ", חוץ ממי שקיבל התראה כזו בשבוע האחרון. אי אפשר לבטל התראה שיצאה.",
+        ok: "פרסום ושליחה"
+      })
+      : Promise.resolve(true);
+    ask.then(function (yes) {
+      if (!yes) return;
+      var btns = document.querySelectorAll("#of-actions .btn");
+      Array.prototype.forEach.call(btns, function (b) { b.disabled = true; });
+      rpc("admin_save_offer", { offer: p }).then(function (id) {
+        toast(status === "published" ? (willPush ? "פורסם, וההתראה בדרך" : "פורסם") : "נשמר כטיוטה");
+        offers.form.id = id;
+        return loadOffers().then(function () {
+          var row = offers.rows.filter(function (r) { return r.id === id; })[0];
+          if (row && state.tab === "offers") { offers.form = offerForm(row); drawOfferForm(); drawOfferList(); }
+        });
+      }).catch(function (e) {
+        Array.prototype.forEach.call(btns, function (b) { b.disabled = false; });
+        if (missingRpc(e)) return offerError("השרת עוד לא עודכן לגרסה הזו (v56). מריצים את העדכון ב־Supabase.");
+        var c = code(e);
+        if (c === "invalid_argument" || /offer_not_found/.test(String(e && e.message))) {
+          return offerError(offerDetail(e) || errorText(e));
+        }
+        fail(e);
+      });
+    });
+  }
+
+  function setOfferStatus(id, status) {
+    var row = offers.rows.filter(function (r) { return r.id === id; })[0];
+    var prev = (row && row.status) || offers.form.status;
+    rpc("admin_set_offer_status", { offer: id, status: status }).then(function () {
+      var undo = function () {
+        rpc("admin_set_offer_status", { offer: id, status: prev }).then(function () {
+          toast("בוטל");
+          refreshOffer(id);
+        }).catch(fail);
+      };
+      toast(status === "archived" ? "הועבר לארכיון" : status === "draft" ? "הפרסום הופסק. הוא חזר לטיוטות." : "פורסם", "ביטול", undo);
+      refreshOffer(id);
+    }).catch(function (e) {
+      if (/offer_not_found/.test(String(e && e.message))) { toast("הפרסום כבר לא קיים."); return loadOffers(); }
+      fail(e);
+    });
+  }
+
+  function refreshOffer(id) {
+    return loadOffers().then(function () {
+      if (state.tab !== "offers" || !offers.form || offers.form.id !== id) return;
+      var row = offers.rows.filter(function (r) { return r.id === id; })[0];
+      offers.form = row ? offerForm(row) : offerForm(null);
+      drawOfferForm();
+      drawOfferList();
+    });
+  }
+
+  // A yes / no question (the push confirmation). Resolves true on yes.
+  function askYes(o) {
+    return new Promise(function (resolve) {
+      var dlg = $("ask");
+      $("ask-title").textContent = o.title;
+      $("ask-text").textContent = o.text || "";
+      $("ask-ok").textContent = o.ok;
+      var done = function (v) {
+        $("ask-form").onsubmit = null;
+        $("ask-cancel").onclick = null;
+        dlg.onclose = null;
+        if (dlg.open) dlg.close();
+        resolve(v);
+      };
+      $("ask-form").onsubmit = function (ev) { ev.preventDefault(); done(true); };
+      $("ask-cancel").onclick = function () { done(false); };
+      dlg.onclose = function () { done(false); };
+      if (typeof dlg.showModal === "function") dlg.showModal();
+      else dlg.setAttribute("open", "");
+      $("ask-ok").focus();
+    });
+  }
+
   // ------------------------------------------------------------------ "עוד" (phone, round 38) ---
 
   function renderMore() {
@@ -2687,7 +3299,8 @@
         link("#overview", "מבט על", "M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z"),
         link("#log", "יומן פעולות", "M6 3.5h9l3 3v14H6zM9 10h6M9 14h6M9 18h3"),
         link("#words", "מילים חסומות", "M4 6h16M4 12h10M4 18h7M17 15l4 4M21 15l-4 4"),
-        link("#settings", "הגדרות", "M4 7h10M18 7h2M4 17h4M12 17h8M14 4.5v5M8 14.5v5")),
+        link("#settings", "הגדרות", "M4 7h10M18 7h2M4 17h4M12 17h8M14 4.5v5M8 14.5v5"),
+        link("#offers", "הטבות ואירועים", "M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 8v10")),
       h("section", { class: "card" },
         h("span", { class: "note", text: "מחובר/ת בתור" }),
         h("b", { dir: "ltr", text: state.email }),

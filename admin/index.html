@@ -16,12 +16,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap">
 <!-- ?v= changes with every release of admin.css / admin.js: GitHub Pages lets browsers cache them for 10 minutes, and an
      old file next to a new page breaks it. -->
-<link rel="stylesheet" href="admin.css?v=39">
+<link rel="stylesheet" href="admin.css?v=40">
 <!-- supabase-js, pinned (the file the jsDelivr path names never changes; the hash below checks it). -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
         integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
         crossorigin="anonymous" defer></script>
-<script src="admin.js?v=42" defer></script>
+<script src="admin.js?v=43" defer></script>
 </head>
 <body>
 <!-- Admin page for בוא נרוץ (round 24; round 38: sketch A on a computer, sketch B on a phone). Not linked from the
@@ -53,6 +53,8 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7M17 15l4 4M21 15l-4 4"/></svg>מילים חסומות</a>
       <a href="#settings" data-nav="settings">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M14 4.5v5M8 14.5v5"/></svg>הגדרות</a>
+      <a href="#offers" data-nav="offers">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 8v10"/></svg>הטבות ואירועים</a>
     </nav>
     <div class="side-foot">
       <span class="side-email" id="who" dir="ltr"></span>
@@ -193,6 +195,18 @@
     <div class="actions">
       <button type="submit" class="btn ink" id="confirm-ok" value="ok"></button>
       <button type="button" class="btn text" id="confirm-cancel">ביטול</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- A yes / no question (round 57: publishing an offer with a push). -->
+<dialog id="ask" class="sheet" aria-labelledby="ask-title">
+  <form class="stack" id="ask-form" novalidate>
+    <h2 id="ask-title"></h2>
+    <p class="muted" id="ask-text"></p>
+    <div class="actions">
+      <button type="submit" class="btn ink" id="ask-ok" value="ok"></button>
+      <button type="button" class="btn text" id="ask-cancel">ביטול</button>
     </div>
   </form>
 </dialog>
