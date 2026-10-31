@@ -248,7 +248,7 @@
   function code(e) {
     var m = (e && (e.message || e.error_description || e.msg)) || String(e || "");
     var known = ["mfa_required", "not_admin", "not_authenticated", "invalid_argument", "user_not_found", "message_not_found",
-      "group_run_not_found", "report_not_found", "flag_not_found", "cannot_delete_admin", "too_soon"];
+      "group_run_not_found", "crew_not_found", "report_not_found", "flag_not_found", "cannot_delete_admin", "too_soon"];
     for (var i = 0; i < known.length; i++) if (m.indexOf(known[i]) >= 0) return known[i];
     if (/jwt|token|session/i.test(m)) return "session";
     return "other";
@@ -534,7 +534,6 @@
     if (entering) return;
     entering = true;
     state.email = (session.user && session.user.email) || "";
-    $("who").textContent = state.email;
     $("sign-out").hidden = false;
     loading("בודקים הרשאה…");
     Promise.all([rpc("admin_reports", { status: "open", max_rows: 200 }), rpc("admin_flags")])
@@ -556,7 +555,7 @@
       });
   }
 
-  // What waits (open reports + open flags): the count on "צריך טיפול" / "משימות".
+  // What waits (open reports + open flags): the count on "משימות" and the top bar's pill ("N לטיפול").
   function todoCount() { return state.openReports.length + state.flags.length; }
   function updateCounts() {
     var n = todoCount();
@@ -564,19 +563,26 @@
       c.textContent = String(n);
       c.hidden = n === 0;
     });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-todo-label]"), function (c) {
+      c.textContent = n ? fmt(n) + " לטיפול" : "אין משימות";
+      c.parentNode.classList.toggle("hot", n > 0);
+    });
   }
 
-  // A computer gets the side menu and starts on "מבט על"; a phone gets the bottom tabs and starts on "משימות".
+  // A computer gets the top bar, a phone the bottom tabs; both start on "מבט על" (round 58).
   var WIDE = window.matchMedia("(min-width: 960px)");
-  var TABS = ["overview", "inbox", "users", "runs", "log", "words", "settings", "offers", "more"];
+  var TABS = ["overview", "inbox", "users", "runs", "groups", "offers", "races", "system", "data", "log", "words", "settings", "more"];
+  // מערכת's own tabs (the top bar marks מערכת for each).
+  var SYSTEM_TABS = [["system", "מצב"], ["data", "נתונים וגרפים"], ["log", "יומן"], ["words", "מילים חסומות"], ["settings", "הגדרות"]];
+  var IN_SYSTEM = { system: true, data: true, log: true, words: true, settings: true };
   // On a phone these live under "עוד".
-  var UNDER_MORE = { overview: true, log: true, words: true, settings: true, offers: true };
+  var UNDER_MORE = { runs: true, offers: true, races: true, system: true, data: true, log: true, words: true, settings: true };
 
   function setTab(tab) {
     state.tab = tab;
     Array.prototype.forEach.call(document.querySelectorAll("[data-nav]"), function (a) {
       var nav = a.getAttribute("data-nav");
-      var on = nav === tab || (nav === "more" && UNDER_MORE[tab]);
+      var on = nav === tab || (nav === "more" && UNDER_MORE[tab]) || (nav === "system" && IN_SYSTEM[tab]);
       if (on) a.setAttribute("aria-current", "page");
       else a.removeAttribute("aria-current");
     });
@@ -585,25 +591,38 @@
   function route() {
     if (!sb || !state.signedIn) return;
     closeMenus();
-    var m = location.hash.match(/^#(report|user|run)\/([0-9a-f-]{36})$/i);
+    var m = location.hash.match(/^#(report|user|run|group)\/([0-9a-f-]{36})$/i);
     if (m && m[1] === "report") { setTab("inbox"); return renderOneReport(m[2]); }
     if (m && m[1] === "user") { setTab("users"); return renderUser(m[2]); }
     if (m && m[1] === "run") { setTab("runs"); return renderRun(m[2]); }
+    if (m && m[1] === "group") { setTab("groups"); return renderGroup(m[2]); }
     var tab = location.hash.slice(1);
     // Links from before round 38 (the old tabs, the report mails).
     if (tab === "reports" || tab === "flags") { state.inboxFilter = tab; tab = "inbox"; }
-    if (TABS.indexOf(tab) < 0) tab = WIDE.matches ? "overview" : "inbox";
+    if (TABS.indexOf(tab) < 0) tab = "overview";
     if (tab === "more" && WIDE.matches) tab = "overview";
     setTab(tab);
     if (tab === "overview") return renderOverview();
     if (tab === "inbox") return renderInbox();
     if (tab === "users") return renderUsers();
     if (tab === "runs") return renderRuns();
+    if (tab === "groups") return renderGroups();
+    if (tab === "offers") return renderOffers();
+    if (tab === "races") return renderRaces();
+    if (tab === "system") return renderHealth();
+    if (tab === "data") return renderData();
     if (tab === "words") return renderWords();
     if (tab === "settings") return renderSettings();
-    if (tab === "offers") return renderOffers();
     if (tab === "more") return renderMore();
     return renderLog(true);
+  }
+
+  // The head of מערכת's pages: the title and its tabs (links, so each has its own address).
+  function systemHead(active) {
+    return [pageHead("מערכת"),
+      h("nav", { class: "subtabs", "aria-label": "מערכת" }, SYSTEM_TABS.map(function (t) {
+        return h("a", { href: "#" + t[0], "aria-current": t[0] === active ? "page" : null, text: t[1] });
+      }))];
   }
   function go(h2) {
     if (location.hash === h2) route();
@@ -651,7 +670,7 @@
         el.appendChild(document.createTextNode("השאר עובד כשורה · Push " + rows[0].value));
       } else {
         el.appendChild(h("span", { class: "ov-dot warn small", "aria-hidden": "true" }, svg("M12 6v7M12 17.5v.5")));
-        el.appendChild(h("a", { href: "#overview", text: warn.length === 1 ? "כדאי לבדוק: " + warn[0].title : warn.length + " דברים דורשים בדיקה" }));
+        el.appendChild(h("a", { href: "#system", text: warn.length === 1 ? "כדאי לבדוק: " + warn[0].title : warn.length + " דברים דורשים בדיקה" }));
       }
     });
   }
@@ -911,7 +930,7 @@
             h("button", { type: "button", class: "icon-btn", "aria-label": "הסרת " + w.word, onclick: function () { removeWord(w.word); } }, svg("M6 6l12 12M18 6L6 18")));
         }))
         : empty("הרשימה ריקה", "מילה ברשימה נחסמת בשם, בתיאור ובכיתוב של ריצה, ומוחלפת ב-*** בצ׳אט.");
-      show(form, h("p", { class: "note", text: "המילים נשמרות בצורה מנורמלת (בלי ניקוד, אותיות סופיות רגילות). נבדקות מילים שלמות." }), list);
+      show(systemHead("words"), form, h("p", { class: "note", text: "המילים נשמרות בצורה מנורמלת (בלי ניקוד, אותיות סופיות רגילות). נבדקות מילים שלמות." }), list);
     }).catch(fail);
   }
 
@@ -985,8 +1004,8 @@
       rows = rows || [];
       state.log = state.log.concat(rows);
       state.logDone = rows.length < 50;
-      if (!state.log.length) return show(empty("עוד אין פעולות", "כל פעולה שלך נשמרת כאן."));
-      show(h("div", { class: "list" }, state.log.map(logRow)),
+      if (!state.log.length) return show(systemHead("log"), empty("עוד אין פעולות", "כל פעולה שלך נשמרת כאן."));
+      show(systemHead("log"), h("div", { class: "list" }, state.log.map(logRow)),
         state.logDone ? null : h("button", { type: "button", class: "btn quiet", onclick: function () { renderLog(false); } }, "עוד"));
     }).catch(fail);
   }
@@ -1146,7 +1165,7 @@
           saveAll(calls, btn, function (n) { toast(n === 1 ? "נשמר" : "נשמרו " + n + " שינויים"); renderSettings(); });
         });
 
-      show(limitsForm, versionsForm);
+      show(systemHead("settings"), limitsForm, versionsForm, accountCard());
     }).catch(fail);
   }
 
@@ -1161,7 +1180,7 @@
     "lets-run-moderation-sweep": "מיילים על דיווחים",
     "lets-run-daily": "ניקוי וסיכום יומי"
   };
-  var ov = { token: 0, ui: null, healthAt: null, ticker: null, missing: false };
+  var ov = { token: 0, tab: "", ui: null, healthAt: null, ticker: null, missing: false };
 
   // "1,240" / "4.2" / "—".
   function fmt(n, digits) {
@@ -1233,7 +1252,7 @@
   }
   // false when the result should not be drawn (another tab, a newer load, or an access / version problem handled here).
   function ovUsable(token, res) {
-    if (token !== ov.token || state.tab !== "overview" || ov.missing) return false;
+    if (token !== ov.token || state.tab !== ov.tab || ov.missing) return false;
     if (res.ok) return true;
     var c = code(res.error);
     if (missingRpc(res.error)) { ov.missing = true; showNotYet(); return false; }
@@ -1245,83 +1264,252 @@
     stopTicker();
     show(h("div", { class: "card empty" }, svg("M12 8v4M12 16h.01M12 3a9 9 0 100 18 9 9 0 000-18z"),
       h("b", { text: "השרת עוד לא עודכן לגרסה הזו" }),
-      h("span", { text: "״מבט על״ יופיע אחרי שעדכון v27 יורץ ב־Supabase. שאר הלשוניות עובדות כרגיל." })));
+      h("span", { text: "העמוד הזה יופיע אחרי שעדכון v27 יורץ ב־Supabase. שאר הלשוניות עובדות כרגיל." })));
+  }
+
+  // ---- מבט על (round 58, direction B): six tiles, one per area. Each loads on its own and links to its page.
+
+  var TILE_ICONS = {
+    users: "M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.8a3.3 3.3 0 0 1 0 6.4M18.5 14.8c1.6.8 2.6 2.5 3 5.2",
+    runs: "M14 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 21l3-6 3 2v4M6.5 11.5l3-3.5 4 1.5 2.5 3h3M11 15l2-5",
+    groups: "M8 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20c.6-3.2 2.6-5 5-5s4.4 1.8 5 5M11 20c.6-3.2 2.6-5 5-5s4.4 1.8 5 5",
+    offers: "M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 8v10",
+    safety: "M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z",
+    system: "M3 12h4l2-5 4 10 2-5h6"
+  };
+
+  function tile(key, title) {
+    var el = h("section", { class: "tile", "aria-labelledby": "tile-" + key, "aria-busy": "true" });
+    el.dataset.title = title;
+    fill(el, tileHead(key, title), h("div", { class: "tile-skel", "aria-hidden": "true" }, h("i"), h("i"), h("i")),
+      h("span", { class: "sr-only", text: "טוענים…" }));
+    el.setAttribute("aria-busy", "true");
+    return el;
+  }
+  function tileHead(key, title) {
+    return h("h2", { class: "tile-title", id: "tile-" + key }, h("span", { class: "tile-icon" }, svg(TILE_ICONS[key])), title);
+  }
+  // o: { big, bigClass, bigSub, visual, lines: [[label, value]], href, link }
+  function drawTile(el, key, o) {
+    fill(el, tileHead(key, el.dataset.title),
+      h("div", { class: "tile-big" }, typeof o.big === "string"
+        ? h("span", { class: "num tile-value" + (o.bigClass ? " " + o.bigClass : ""), dir: "ltr", text: o.big })
+        : num(o.big, o.digits, "tile-value" + (o.bigClass ? " " + o.bigClass : "")),
+        o.bigSub ? h("span", { class: "tile-big-sub", text: o.bigSub }) : null),
+      o.visual || null,
+      h("dl", { class: "tile-lines" }, (o.lines || []).map(function (l) {
+        return h("div", null, h("dt", { text: l[0] }), h("dd", null, l[1] === null || l[1] === undefined ? "—" : l[1]));
+      })),
+      h("a", { class: "btn quiet small tile-go", href: o.href, text: o.link }));
+  }
+  function tileProblem(el, key, res, again, version) {
+    fill(el, tileHead(key, el.dataset.title), missingRpc(res.error)
+      ? h("p", { class: "note", text: "יופיע אחרי עדכון " + version + " בשרת." })
+      : retryBox("לא הצלחנו לטעון.", again));
+  }
+  // A small line of a daily series, oldest on the right (RTL), today on the left.
+  function sparkline(vals, label) {
+    if (!vals.length || Math.max.apply(null, vals) === 0) return null;
+    var W = 200, H = 36, max = Math.max.apply(null, vals), n = vals.length;
+    var pts = vals.map(function (v, i) {
+      var x = n === 1 ? W / 2 : W - (i * W) / (n - 1);
+      return x.toFixed(1) + " " + (H - 2 - (v / max) * (H - 4)).toFixed(1);
+    });
+    var s = document.createElementNS(SVG_NS, "svg");
+    s.setAttribute("viewBox", "0 0 " + W + " " + H);
+    s.setAttribute("preserveAspectRatio", "none");
+    s.setAttribute("class", "spark");
+    s.setAttribute("role", "img");
+    s.setAttribute("aria-label", label);
+    var p = document.createElementNS(SVG_NS, "path");
+    p.setAttribute("d", "M" + pts.join(" L"));
+    p.setAttribute("vector-effect", "non-scaling-stroke");
+    s.appendChild(p);
+    return s;
+  }
+  // One part of a two-part bar. The page's CSP allows no style attributes, so the share is set through the CSSOM.
+  function splitPart(cls, n) {
+    if (!n) return null;
+    var el = h("span", { class: cls });
+    el.style.flex = String(n);
+    return el;
+  }
+  function inDays(iso) {
+    var ms = new Date(iso).getTime() - Date.now();
+    if (isNaN(ms)) return "";
+    var d = Math.ceil(ms / DAY);
+    return d <= 0 ? "היום" : d === 1 ? "מחר" : "בעוד " + d + " ימים";
   }
 
   function renderOverview() {
     ov.token++;
+    ov.tab = "overview";
+    var ui = ov.ui = {
+      status: h("a", { class: "ov-line", href: "#system" }, h("span", { class: "ov-dot na", "aria-hidden": "true" }), "בודקים שהכל עובד…"),
+      range: h("div", { class: "filters", role: "group", "aria-label": "טווח ימים" }),
+      users: tile("users", "משתמשים"), runs: tile("runs", "ריצות"), groups: tile("groups", "קבוצות"),
+      offers: tile("offers", "הטבות ואירועים"), safety: tile("safety", "בטיחות"), system: tile("system", "מערכת")
+    };
+    show(h("div", { class: "page-head ov-head" }, h("h1", { class: "page-title", text: "מבט על" }), ui.range, ui.status),
+      h("div", { class: "tiles" }, ui.users, ui.runs, ui.groups, ui.offers, ui.safety, ui.system));
+    drawRange();
+    loadTiles();
+  }
+
+  function loadTiles() {
+    loadPeopleTiles();
+    loadGroupsTile();
+    loadOffersTile();
+    loadSafetyTile();
+    loadSystemTile();
+  }
+  function tileLive(token) { return token === ov.token && state.tab === "overview"; }
+
+  // משתמשים + ריצות: admin_overview (by range) and the platforms (admin_push_summary).
+  function loadPeopleTiles() {
+    var ui = ov.ui, token = ov.token, days = state.range;
+    Promise.all([ovCall("admin_overview", { days: days }), ovCall("admin_push_summary")]).then(function (r) {
+      if (!tileLive(token) || days !== state.range) return;
+      var res = r[0], push = r[1].ok ? r[1].data || {} : null;
+      if (!res.ok) {
+        tileProblem(ui.users, "users", res, loadPeopleTiles, "v27");
+        tileProblem(ui.runs, "runs", res, loadPeopleTiles, "v27");
+        return;
+      }
+      var d = res.data || {}, u = d.users || {}, g = d.runs || {};
+      var series = Array.isArray(d.series) ? d.series : [];
+      var ios = push ? Number(push.ios_users) || 0 : 0, android = push ? Number(push.android_users) || 0 : 0;
+      var share = ios + android ? Math.round((ios / (ios + android)) * 100) + "% / " + (100 - Math.round((ios / (ios + android)) * 100)) + "%" : null;
+      drawTile(ui.users, "users", {
+        big: u.total, bigSub: "+" + fmt(u.new_in_range) + " ב־" + days + " ימים",
+        visual: sparkline(series.map(function (x) { return Number(x && x.new_users) || 0; }), "הרשמות לפי יום, " + days + " ימים"),
+        lines: [["פעילים ב־7 ימים", num(u.active_7d)], ["פעילים היום", num(u.active_today)],
+          ["iPhone / Android", share ? h("span", { class: "num", dir: "ltr", text: share }) : null]],
+        href: "#users", link: "לטבלת המשתמשים" });
+      var avg = g.avg_participants_in_range;
+      drawTile(ui.runs, "runs", {
+        big: g.today, bigSub: "היום",
+        visual: sparkline(series.map(function (x) { return Number(x && x.runs_created) || 0; }), "ריצות שנוצרו לפי יום, " + days + " ימים"),
+        lines: [["קרובות", num(g.upcoming_total)], ["קרו עם משתתפים", num(g.happened_in_range)],
+          ["ממוצע משתתפים", avg === null || avg === undefined ? null : num(avg, 1)]],
+        href: "#runs", link: "לכל הריצות" });
+    });
+  }
+
+  function loadGroupsTile() {
+    var ui = ov.ui, token = ov.token;
+    ovCall("admin_crews_summary").then(function (res) {
+      if (!tileLive(token)) return;
+      if (!res.ok) return tileProblem(ui.groups, "groups", res, loadGroupsTile, "v57");
+      var d = res.data || {};
+      var pub = Number(d.public) || 0, priv = Number(d.private) || 0;
+      var bar = pub + priv ? h("div", { class: "tile-split" },
+        h("div", { class: "split-bar", role: "img", "aria-label": fmt(pub) + " ציבוריות, " + fmt(priv) + " פרטיות" },
+          splitPart("split-a", pub), splitPart("split-b", priv)),
+        h("div", { class: "split-keys", "aria-hidden": "true" },
+          h("span", null, h("i", { class: "split-a" }), num(pub), " ציבוריות"),
+          h("span", null, h("i", { class: "split-b" }), num(priv), " פרטיות"))) : null;
+      drawTile(ui.groups, "groups", {
+        big: d.open, bigSub: "פתוחות", visual: bar,
+        lines: [["עם ריצה קבועה", num(d.with_schedule)], ["בקשות הצטרפות ממתינות", num(d.pending_requests)],
+          ["שקטות 14 יום", num(d.quiet_14d)]],
+        href: "#groups", link: "לכל הקבוצות" });
+    });
+  }
+
+  function loadOffersTile() {
+    var ui = ov.ui, token = ov.token;
+    ovCall("admin_offers").then(function (res) {
+      if (!tileLive(token)) return;
+      if (!res.ok) return tileProblem(ui.offers, "offers", res, loadOffersTile, "v56");
+      var live = (res.data || []).filter(function (o) { return o.state === "live"; });
+      var sum = function (k) { return live.reduce(function (a, o) { return a + (Number(o[k]) || 0); }, 0); };
+      var next = live.filter(function (o) { return o.ends_at; }).sort(function (a, b) { return new Date(a.ends_at) - new Date(b.ends_at); })[0];
+      drawTile(ui.offers, "offers", {
+        big: live.length, bigSub: "באוויר",
+        lines: [["צפיות", num(sum("seen_count"))], ["קודים שהועתקו", num(sum("copy_count"))],
+          ["נגמרת הכי קרוב", next ? inDays(next.ends_at) : live.length ? "בלי תאריך סיום" : "אין באוויר"]],
+        href: "#offers", link: live.length ? "להטבות" : "+ הטבה חדשה" });
+    });
+  }
+
+  function loadSafetyTile() {
+    var ui = ov.ui, token = ov.token;
+    reloadOpen().then(function () {
+      if (!tileLive(token)) return;
+      var msg = state.openReports.filter(function (r) { return r.context && r.context.type === "message"; }).length;
+      var oldest = state.openReports.reduce(function (a, r) { return !a || new Date(r.created_at) < new Date(a) ? r.created_at : a; }, null);
+      var n = todoCount();
+      drawTile(ui.safety, "safety", {
+        big: n, bigClass: n ? "hot" : "", bigSub: n ? "פתוחים" : "הכל טופל",
+        lines: [["דיווחים על הודעות", num(msg)], ["דיווחים על פרופילים וריצות", num(state.openReports.length - msg)],
+          ["מסומנים", num(state.flags.length)], ["הוותיק פתוח", oldest ? ago(oldest) : null]],
+        href: "#inbox", link: "לתיבת המשימות" });
+    }, function (e) {
+      if (tileLive(token)) tileProblem(ui.safety, "safety", { error: e }, loadSafetyTile, "v25");
+    });
+  }
+
+  function loadSystemTile() {
+    var ui = ov.ui, token = ov.token;
+    ovCall("admin_health").then(function (res) {
+      if (!tileLive(token)) return;
+      if (!res.ok) {
+        fill(ui.status, h("span", { class: "ov-dot na", "aria-hidden": "true" }), "לא הצלחנו לבדוק");
+        return tileProblem(ui.system, "system", res, loadSystemTile, "v27");
+      }
+      var rows = healthRows(res.data || {});
+      var by = {};
+      rows.forEach(function (r) { by[r.title] = r; });
+      var warn = rows.filter(function (r) { return r.status === "warn"; });
+      ui.status.className = "ov-line " + (warn.length ? "warn" : "ok");
+      fill(ui.status, statusMark(warn.length ? "warn" : "ok"),
+        !warn.length ? "כל המערכות תקינות" : warn.length === 1 ? "לבדיקה: " + warn[0].title : warn.length + " דברים לבדיקה");
+      var push = by["התראות Push"] || {}, cron = by["משימות מתוזמנות"] || {}, mail = by["מיילים על דיווחים"] || {}, photo = by["בדיקות תמונה"] || {};
+      drawTile(ui.system, "system", {
+        big: push.value && push.value !== "—" ? push.value : "—", bigClass: push.status === "warn" ? "hot" : "", bigSub: "פוש נמסר (24 ש׳)",
+        lines: [["משימות מתוזמנות", h("span", { class: "num", dir: "ltr", text: cron.value || "—" })],
+          ["מיילים ממתינים", num(mail.value)], ["בדיקות תמונה (24 ש׳)", num(photo.value)]],
+        href: "#system", link: "למצב המערכת" });
+    });
+  }
+
+  // ---- מערכת › מצב: the status line and "האם הכל עובד" (round 38's rows, moved here in round 58).
+
+  function renderHealth() {
+    ov.token++;
+    ov.tab = "system";
     ov.missing = false;
     ov.healthAt = null;
     var ui = ov.ui = {
       status: h("section", { class: "ov-status", "aria-live": "polite" }),
-      range: h("div", { class: "filters", role: "group", "aria-label": "טווח ימים" }),
-      counts: h("section", { class: "ov-grid kpis", "aria-label": "מספרים" }),
-      now: h("section", { class: "card ov-now", "aria-labelledby": "ov-now-title" }),
-      todo: h("section", { class: "card ov-todo", "aria-labelledby": "ov-todo-title" }),
-      signups: h("section", { class: "card ov-chart", "aria-labelledby": "ov-signups-title" }),
-      chart: h("section", { class: "card ov-chart", "aria-labelledby": "ov-chart-title" }),
       health: h("section", { class: "list ov-health", "aria-labelledby": "ov-health-title" }),
-      push: h("div", { class: "list-row ov-row" }),
-      retention: h("section", { class: "card ov-ret", "aria-labelledby": "ov-ret-title" })
+      push: h("div", { class: "list-row ov-row" })
     };
-    show(h("div", { class: "page-head" }, h("h1", { class: "page-title", text: "מבט על" }), ui.range),
-      ui.status, ui.counts,
-      h("div", { class: "ov-cols wide-first" }, ui.now, ui.todo),
-      h("div", { class: "ov-cols" }, ui.signups,
-        h("div", { class: "ov-stack" }, h("h2", { class: "ov-label", id: "ov-health-title", text: "האם הכל עובד (24 שעות אחרונות)" }), ui.health)),
-      h("div", { class: "ov-cols" }, ui.chart, ui.retention));
-    drawRange();
+    show(systemHead("system"), ui.status,
+      h("h2", { class: "ov-label", id: "ov-health-title", text: "האם הכל עובד (24 שעות אחרונות)" }), ui.health);
     loadHealth();
-    loadRange();
-    loadNow();
-    drawTodo();
     loadPush();
   }
 
-  // ---- "קורה עכשיו" (admin_runs, scope now) and "צריך טיפול" (the inbox's first items)
+  // ---- מערכת › נתונים וגרפים: the numbers, the charts and the returning-users table, by range.
 
-  function loadNow() {
-    var ui = ov.ui, token = ov.token;
-    fill(ui.now, h("h2", { class: "ov-card-title", id: "ov-now-title", text: "קורה עכשיו" }), skeleton("מחפשים ריצות בשעות הקרובות…", "rows-s"));
-    ovCall("admin_runs", { scope: "now", max_rows: 6 }).then(function (res) {
-      if (token !== ov.token || state.tab !== "overview") return;
-      var title = h("div", { class: "card-head" }, h("h2", { class: "ov-card-title", id: "ov-now-title", text: "קורה עכשיו" }),
-        h("a", { class: "head-link", href: "#runs", text: "לכל הריצות" }));
-      if (!res.ok) {
-        return fill(ui.now, title, missingRpc(res.error) ? h("p", { class: "note", text: "יופיע אחרי עדכון v36 בשרת." })
-          : retryBox("לא הצלחנו לטעון את הריצות.", loadNow));
-      }
-      var rows = res.data || [];
-      fill(ui.now, title, rows.length ? h("div", { class: "run-list compact" }, rows.map(function (g) { return runRow(g, true); }))
-        : emptyNote("אין ריצות בשלוש השעות האחרונות או בשש הקרובות.", "M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", "שקט כרגע"));
-    });
-  }
-
-  function drawTodo() {
-    var ui = ov.ui;
-    var items = [];
-    state.openReports.forEach(function (r) {
-      var p = r.reported || {};
-      var what = r.context && r.context.type === "message" ? "דיווח על הודעה" : r.context && r.context.type === "run" ? "דיווח על ריצה" : "דיווח על פרופיל";
-      items.push({ at: r.created_at, tone: "report", title: what + ": " + nameAge(p),
-        sub: (REASONS[r.reason] || r.reason) + " · " + ago(r.created_at), href: "#report/" + r.id, action: "לטיפול" });
-    });
-    state.flags.forEach(function (f) {
-      items.push({ at: f.flagged_at, tone: "flag", title: "מסומן/ת: " + nameAge(f.person || {}),
-        sub: f.reporters_90d + " מדווחים · " + f.blockers_90d + " חוסמים · " + ago(f.flagged_at), href: "#user/" + f.user_id, action: "לכרטיס" });
-    });
-    items.sort(function (a, b) { return new Date(b.at) - new Date(a.at); });
-    var n = items.length;
-    fill(ui.todo,
-      h("div", { class: "card-head" }, h("h2", { class: "ov-card-title", id: "ov-todo-title" }, "צריך טיפול",
-        n ? h("span", { class: "count", text: String(n) }) : null),
-        n > 4 ? h("a", { class: "head-link", href: "#inbox", text: "לכל " + n }) : null),
-      n ? h("div", { class: "todo-list" }, items.slice(0, 4).map(function (i) {
-        return h("div", { class: "todo-row" },
-          h("span", { class: "todo-dot " + i.tone, "aria-hidden": "true" }),
-          h("span", { class: "todo-text" }, h("b", { text: i.title }), h("span", { text: i.sub })),
-          h("a", { class: "btn quiet small", href: i.href, text: i.action }));
-      })) : emptyNote("אין דיווחים פתוחים ואין משתמשים מסומנים.", "M5 12l4 4 10-10", "הכל טופל"));
+  function renderData() {
+    ov.token++;
+    ov.tab = "data";
+    ov.missing = false;
+    var ui = ov.ui = {
+      range: h("div", { class: "filters", role: "group", "aria-label": "טווח ימים" }),
+      counts: h("section", { class: "ov-grid kpis", "aria-label": "מספרים" }),
+      signups: h("section", { class: "card ov-chart", "aria-labelledby": "ov-signups-title" }),
+      chart: h("section", { class: "card ov-chart", "aria-labelledby": "ov-chart-title" }),
+      retention: h("section", { class: "card ov-ret", "aria-labelledby": "ov-ret-title" })
+    };
+    show(systemHead("data"), ui.range, ui.counts,
+      h("div", { class: "ov-cols" }, ui.signups, ui.chart),
+      ui.retention);
+    drawRange();
+    loadRange();
   }
 
   // ---- push devices (admin_push_summary): one more row under "האם הכל עובד"
@@ -1397,7 +1585,8 @@
           state.range = n;
           saveRange(n);
           drawRange();
-          loadRange();
+          if (ov.tab === "overview") loadPeopleTiles();
+          else loadRange();
         }
       }, h("span", { class: "num", dir: "ltr", text: String(n) }), " ימים"));
     });
@@ -1441,10 +1630,7 @@
     return h("button", { type: "button", class: "ov-refresh", "aria-label": "רענון", onclick: function () {
       ov.token++;
       loadHealth();
-      loadRange();
-      loadNow();
       loadPush();
-      reloadOpen().then(function () { if (state.tab === "overview") drawTodo(); }).catch(function () { /* next time */ });
     } }, svg("M20 11a8 8 0 10-2.3 5.7M20 4v7h-7"));
   }
 
@@ -1577,8 +1763,7 @@
       drawRetention(res.data || {});
     });
   }
-  function retryRange() { ov.token++; loadHealthIfFailed(); loadRange(); }
-  function loadHealthIfFailed() { if (!ov.healthAt) loadHealth(); }
+  function retryRange() { ov.token++; loadRange(); }
 
   function countCard(label, value, digits, sub) {
     return h("div", { class: "ov-card" },
@@ -2216,7 +2401,14 @@
     return [h("h2", { class: "section-title", text: "ריצות שארגן/ה" }),
       own.length ? h("div", { class: "list" }, own) : h("p", { class: "note", text: "אין." }),
       h("h2", { class: "section-title", text: "ריצות של אחרים" }),
-      joinedRuns.length ? h("div", { class: "list" }, joinedRuns) : h("p", { class: "note", text: "אין." })];
+      joinedRuns.length ? h("div", { class: "list" }, joinedRuns) : h("p", { class: "note", text: "אין." }),
+      h("h2", { class: "section-title", text: "קבוצות" }),
+      (u.crews || []).length ? h("div", { class: "list" }, u.crews.map(function (c) {
+        return h("a", { class: "list-row", href: "#group/" + c.id },
+          h("span", { class: "grow" }, h("span", { class: "who-name", text: c.name }),
+            h("span", { class: "row-sub", text: [CREW_STATUS[c.status] || c.status, fmt(c.members) + " חברים", "הצטרף/ה " + shortDate(c.joined_at)].join(" · ") })),
+          svg("M15 6l-6 6 6 6"));
+      })) : h("p", { class: "note", text: "אין." })];
   }
 
   function userReports(u) {
@@ -2533,12 +2725,12 @@
         ["אישור מארגן/ת", g.requires_approval ? "כן" : "לא"],
         ["רמת אמון מינימלית", g.min_trust ? TRUST[g.min_trust] || g.min_trust : ""],
         ["מסלול", g.has_route ? "צויר מסלול" : "רק נקודת מפגש"],
-        ["קבוצה", g.crew ? g.crew.name : ""],
+        ["קבוצה", g.crew ? h("a", { href: "#group/" + g.crew.id, text: g.crew.name }) : ""],
         ["הודעות בצ׳אט", fmt(g.messages)],
         ["נוצרה", ago(g.created_at)]].forEach(function (kv) {
         if (!kv[1]) return;
         facts.appendChild(h("dt", { text: kv[0] }));
-        facts.appendChild(h("dd", { text: kv[1] }));
+        facts.appendChild(h("dd", null, kv[1]));
       });
 
       var people = (d.participants || []).map(function (p) {
@@ -2607,6 +2799,308 @@
       if (missingRpc(e)) return show(empty("השרת עוד לא עודכן", "דף הריצה יופיע אחרי שעדכון v36 יורץ ב־Supabase."));
       fail(e);
     });
+  }
+
+  // ------------------------------------------------------------------ groups (round 58, v57, view only) ---
+  // admin_crews_summary / admin_crews / admin_crew. In code a group is a crew. Nothing here changes a group, and the
+  // chat's text never shows (only counts; a reported line is read from its report).
+
+  var groups = { rows: [], total: 0, search: "", visibility: "", state: "open", sort: "activity", token: 0, timer: null };
+  var GROUP_VIS = [["", "הכל"], ["public", "ציבוריות"], ["private", "פרטיות"]];
+  var GROUP_STATES = [["open", "פתוחות"], ["quiet", "שקטות 14 יום"], ["closed", "נסגרו"], ["all", "הכל"]];
+  var GROUP_SORTS = [["activity", "מיון: פעילות אחרונה"], ["members", "מיון: הכי הרבה חברים"], ["new", "מיון: חדשות"]];
+  var WEEKDAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+  var CREW_STATUS = { forming: "בהתהוות", active: "פעילה", closed: "נסגרה" };
+  var CREW_EVENTS = {
+    opened: "הקבוצה נפתחה", joined: "הצטרפ/ה", left: "יצא/ה", renamed: "שינוי שם", run_opened: "נפתחה ריצה",
+    closed: "הקבוצה נסגרה", chat_mode: "שינוי מי כותב בצ׳אט", schedule_set: "נקבעה ריצה קבועה",
+    schedule_cleared: "הריצה הקבועה הופסקה", crew_made_public: "הפכה לציבורית", crew_made_private: "הפכה לפרטית",
+    member_removed: "הוצא/ה מהקבוצה"
+  };
+
+  function paceRange(a, b) {
+    var f = function (s) { s = Number(s); return s ? Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") : ""; };
+    var x = f(a), y = f(b);
+    // Isolated left to right, or the bidi algorithm prints "6:15–5:30" in a Hebrew line.
+    var r = x && y ? (x === y ? x : x + "–" + y) : x || y;
+    return r ? "\u2066" + r + "\u2069" : "";
+  }
+  function scheduleText(s) {
+    if (!s || s.weekday === null || s.weekday === undefined) return "";
+    return "כל " + (WEEKDAYS[s.weekday] || "") + " " + String(s.local_time || "").slice(0, 5) + (s.active === false ? " (מושהית)" : "");
+  }
+  function crewBadge(c, big) {
+    if (c && c.photo_url && /^https:\/\//.test(c.photo_url)) {
+      return h("img", { class: "crew-badge" + (big ? " big" : ""), src: c.photo_url, alt: "", loading: "lazy", referrerpolicy: "no-referrer" });
+    }
+    var el = h("span", { class: "crew-badge" + (big ? " big" : ""), "aria-hidden": "true", text: Array.from(((c && c.name) || "?").trim())[0] || "?" });
+    el.style.background = TONES[hash((c && c.id) || "") % TONES.length];
+    return el;
+  }
+  function visChip(v) { return v === "public" ? h("span", { class: "chip ink", text: "ציבורית" }) : h("span", { class: "chip", text: "פרטית" }); }
+
+  function groupCount(label, value, sub, hot) {
+    return h("div", { class: "ov-card" }, h("span", { class: "ov-card-label", text: label }),
+      num(value, 0, "ov-card-value" + (hot ? " hot" : "")), h("span", { class: "ov-card-sub", text: sub || "" }));
+  }
+
+  function renderGroups() {
+    var input = h("input", { type: "search", placeholder: "שם קבוצה, אזור או חבר/ה", "aria-label": "חיפוש קבוצה", autocomplete: "off", value: groups.search });
+    input.addEventListener("input", function () {
+      clearTimeout(groups.timer);
+      groups.timer = setTimeout(function () { groups.search = input.value.trim(); loadGroups(true); }, 350);
+    });
+    var seg = function (label, list, key) {
+      return h("div", { class: "filters", role: "group", "aria-label": label }, list.map(function (f) {
+        return h("button", { type: "button", "aria-pressed": groups[key] === f[0] ? "true" : "false", onclick: function (ev) {
+          groups[key] = f[0];
+          Array.prototype.forEach.call(ev.currentTarget.parentNode.children, function (b) { b.setAttribute("aria-pressed", "false"); });
+          ev.currentTarget.setAttribute("aria-pressed", "true");
+          loadGroups(true);
+        } }, f[1]);
+      }));
+    };
+    var counts = h("section", { class: "ov-grid group-counts", "aria-label": "מספרים" },
+      [0, 1, 2, 3].map(function () { return h("div", { class: "ov-card skel-card", "aria-hidden": "true" }); }));
+    show(pageHead("קבוצות", h("span", { class: "page-count num", id: "groups-total", dir: "ltr" })),
+      counts,
+      h("div", { class: "toolbar" }, h("label", { class: "search" }, svg("M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4-4"), input),
+        seg("גלוי", GROUP_VIS, "visibility"), seg("מצב", GROUP_STATES, "state"),
+        selectBox("מיון", GROUP_SORTS, groups.sort, function (v) { groups.sort = v; loadGroups(true); })),
+      h("div", { id: "group-list" }));
+    rpc("admin_crews_summary").then(function (d) {
+      if (!document.body.contains(counts)) return;
+      d = d || {};
+      var users = Number(d.users_total) || 0, members = Number(d.members) || 0;
+      fill(counts,
+        groupCount("פתוחות", d.open, fmt(d.with_schedule) + " עם ריצה קבועה"),
+        groupCount("ציבוריות בגילוי", d.public, Number(d.pending_requests) === 1 ? "בקשת הצטרפות אחת ממתינה" : fmt(d.pending_requests) + " בקשות הצטרפות ממתינות"),
+        groupCount("חברים בקבוצות", members, users ? Math.round((members / users) * 100) + "% מהמשתמשים" : ""),
+        groupCount("דורשות מבט", d.crews_with_reports, Number(d.open_reports) === 1 ? "דיווח פתוח אחד" : Number(d.open_reports) ? fmt(d.open_reports) + " דיווחים פתוחים" : "אין דיווחים פתוחים", Number(d.crews_with_reports) > 0));
+    }).catch(function () { if (document.body.contains(counts)) counts.remove(); });
+    loadGroups(true);
+  }
+
+  function loadGroups(fresh) {
+    var token = ++groups.token;
+    if (fresh) groups.rows = [];
+    var box = $("group-list");
+    if (!box) return;
+    if (fresh) {
+      box.textContent = "";
+      box.appendChild(h("p", { class: "loading" }, h("span", { class: "dot", "aria-hidden": "true" }), "טוענים קבוצות…"));
+    }
+    rpc("admin_crews", { visibility: groups.visibility || null, state: groups.state, search: groups.search || null,
+      sort: groups.sort, max_rows: 50, skip: groups.rows.length }).then(function (rows) {
+      if (token !== groups.token || !$("group-list")) return;
+      rows = rows || [];
+      groups.rows = groups.rows.concat(rows);
+      if (rows.length) groups.total = Number(rows[0].total) || groups.rows.length;
+      else if (fresh) groups.total = 0;
+      $("groups-total").textContent = fmt(groups.total);
+      box.textContent = "";
+      if (!groups.rows.length) {
+        box.appendChild(empty(groups.search ? "אין קבוצות שמתאימות" : "אין כאן קבוצות",
+          groups.search ? "אפשר לחפש חלק משם הקבוצה, מהאזור או משם של חבר/ה." : groups.state === "quiet" ? "כל הקבוצות הפתוחות היו פעילות בשבועיים האחרונים." : "קבוצה חדשה תופיע כאן."));
+        return;
+      }
+      box.appendChild(h("div", { class: "crew-list" },
+        h("div", { class: "crew-row crew-head", "aria-hidden": "true" },
+          h("span", { class: "c-name", text: "קבוצה" }), h("span", { class: "c-members", text: "חברים" }),
+          h("span", { class: "c-sched", text: "ריצה קבועה · הבאה" }), h("span", { class: "c-chat", text: "צ׳אט" }),
+          h("span", { class: "c-flags", text: "דורש מבט" })),
+        groups.rows.map(crewRow)));
+      if (groups.rows.length < groups.total) {
+        box.appendChild(h("button", { type: "button", class: "btn quiet more-btn", onclick: function () { loadGroups(false); } },
+          "עוד " + fmt(Math.min(50, groups.total - groups.rows.length))));
+      }
+    }).catch(function (e) {
+      if (token !== groups.token) return;
+      box.textContent = "";
+      if (missingRpc(e)) return box.appendChild(empty("השרת עוד לא עודכן", "רשימת הקבוצות תופיע אחרי שעדכון v57 יורץ ב־Supabase."));
+      fail(e);
+    });
+  }
+
+  function crewRow(c) {
+    var flags = [
+      c.open_reports ? h("span", { class: "chip suspended", text: c.open_reports === 1 ? "דיווח פתוח" : c.open_reports + " דיווחים" }) : null,
+      c.pending_requests ? h("span", { class: "chip warn", text: c.pending_requests === 1 ? "בקשה ממתינה" : c.pending_requests + " בקשות" }) : null
+    ];
+    var sub = [c.area_label, paceRange(c.pace_min_s, c.pace_max_s)].filter(Boolean).join(" · ");
+    return h("a", { class: "crew-row", href: "#group/" + c.id },
+      h("span", { class: "c-name" }, crewBadge(c),
+        h("span", { class: "crew-text" }, h("b", { class: "crew-title", text: c.name }),
+          h("span", { class: "chips" }, visChip(c.visibility),
+            c.status !== "active" ? h("span", { class: "chip", text: CREW_STATUS[c.status] || c.status }) : null,
+            sub ? h("span", { class: "crew-sub", text: sub }) : null))),
+      h("span", { class: "c-members" }, h("span", { class: "num", text: fmt(c.members) }),
+        h("small", { text: c.admins === 1 ? " · מנהל/ת" : " · " + fmt(c.admins) + " מנהלים" })),
+      h("span", { class: "c-sched" }, h("span", { text: scheduleText(c.schedule) || "בלי ריצה קבועה" }),
+        h("small", { text: c.next_run_at ? "הבאה " + dayLabel(c.next_run_at) + " " + clock(new Date(c.next_run_at)) : "אין ריצה קרובה" })),
+      h("span", { class: "c-chat" }, h("span", { text: c.last_message_at ? ago(c.last_message_at) : "עוד לא כתבו" }),
+        h("small", { text: fmt(c.messages_7d) + " הודעות השבוע" })),
+      h("span", { class: "c-flags chips" }, flags[0] || flags[1] ? flags : h("span", { class: "muted", text: "—" })));
+  }
+
+  // ------------------------------------------------------------------ one group (round 58) ---
+
+  function renderGroup(id) {
+    loading("טוענים את הקבוצה…");
+    rpc("admin_crew", { crew: id }).then(function (d) {
+      if (state.tab !== "groups" || location.hash !== "#group/" + id) return;
+      d = d || {};
+      var c = d.crew || {}, chat = d.chat || {}, members = d.members || [], reports = d.reports || [];
+      var openReports = reports.filter(function (r) { return r.status === "open"; });
+      var together = (d.runs || []).filter(function (g) { return new Date(g.starts_at) <= new Date(); }).length;
+      var origin = c.origin_run;
+      var facts = [c.area_label, paceRange(c.pace_min_s, c.pace_max_s) ? "קצב " + paceRange(c.pace_min_s, c.pace_max_s) : "",
+        c.chat_mode === "admins" ? "צ׳אט: רק מנהלים כותבים" : "צ׳אט: כולם כותבים",
+        c.invite_link_on ? "קישור הזמנה פעיל" : ""].filter(Boolean);
+
+      var head = h("section", { class: "card crew-head-card" },
+        crewBadge(c, true),
+        h("div", { class: "crew-head-main" },
+          h("div", { class: "crew-h1" }, h("h1", { class: "page-title", text: c.name || "קבוצה" }), visChip(c.visibility),
+            h("span", { class: "chip " + (c.status === "active" ? "ok" : c.status === "closed" ? "" : "warn"), text: CREW_STATUS[c.status] || c.status })),
+          c.blurb ? h("p", { class: "crew-blurb", text: "״" + c.blurb + "״" }) : null,
+          h("p", { class: "crew-facts" }, facts.join(" · ")),
+          h("p", { class: "note" }, origin
+            ? ["נולדה מהריצה ", h("a", { href: "#run/" + origin.id, text: title(origin) }), " · " + shortDate(c.created_at)]
+            : "נוצרה ישירות · " + shortDate(c.created_at),
+            c.creator ? [" · על ידי ", h("a", { href: "#user/" + c.creator.id, text: nameAge(c.creator) })] : null,
+            c.closed_at ? " · נסגרה " + shortDate(c.closed_at) : null)));
+
+      var stats = h("div", { class: "stats crew-stats" },
+        stat("חברים", members.length), stat("ריצות יחד", together), stat("הודעות ב־7 ימים", chat.messages_7d),
+        stat("דיווחים פתוחים", openReports.length));
+
+      var memberRows = members.map(function (m) {
+        var how = m.via === "invite" ? "הוזמנ/ה" : m.via === "request" ? "אושר/ה מבקשה" : m.via === "link" ? "הצטרפ/ה בקישור" : "הצטרפ/ה מהריצה";
+        return h("a", { class: "list-row person-row", href: "#user/" + m.id }, avatar(m),
+          h("span", { class: "grow" }, h("span", { class: "who-name", text: nameAge(m) }),
+            h("span", { class: "row-sub", text: [how + " " + shortDate(m.joined_at), fmt(m.runs_together) + " ריצות יחד", m.muted ? "השתיק/ה את הצ׳אט" : ""].filter(Boolean).join(" · ") })),
+          h("span", { class: "chips" }, m.role === "admin" ? h("span", { class: "chip ink", text: "מנהל/ת" }) : null,
+            m.suspended_at ? h("span", { class: "chip suspended", text: "מושעה" }) : null));
+      });
+      var requests = (d.requests || []).map(function (r) {
+        var p = r.person || {};
+        return h("a", { class: "list-row person-row", href: "#user/" + p.id }, avatar(p),
+          h("span", { class: "grow" }, h("span", { class: "who-name", text: nameAge(p) }),
+            h("span", { class: "row-sub", text: r.status === "pending" ? ago(r.created_at) + " · פג תוקף " + inDays(r.lapses_at) : "נדחתה " + (r.decided_at ? ago(r.decided_at) : "") })),
+          r.status === "pending" ? h("span", { class: "chip warn", text: "ממתינה" }) : h("span", { class: "chip", text: "נדחתה" }));
+      });
+      var removals = (d.removals || []).map(function (r) {
+        var p = r.person || {};
+        return h("a", { class: "list-row person-row", href: "#user/" + p.id }, avatar(p),
+          h("span", { class: "grow" }, h("span", { class: "who-name", text: nameAge(p) }),
+            h("span", { class: "row-sub", text: ago(r.removed_at) + (r.removed_by ? " · על ידי " + (r.removed_by.name || "מנהל/ת") : "") })));
+      });
+      var section = function (id2, titleText, count, body, note) {
+        return h("section", { class: "card", "aria-labelledby": id2 },
+          h("h2", { class: "ov-card-title", id: id2 }, titleText, count !== null && count !== undefined ? h("span", { class: "head-num num", text: " " + fmt(count) }) : null),
+          note ? h("p", { class: "note", text: note }) : null, body);
+      };
+      var kv = function (rows) {
+        var dl = h("dl", { class: "facts" });
+        rows.forEach(function (r) { if (r[1] === "" || r[1] === null || r[1] === undefined) return; dl.appendChild(h("dt", { text: r[0] })); dl.appendChild(h("dd", null, r[1])); });
+        return dl;
+      };
+      var s = d.schedule;
+      var upcoming = (d.runs || []).filter(function (g) { return new Date(g.starts_at) > new Date(); });
+      var past = (d.runs || []).filter(function (g) { return new Date(g.starts_at) <= new Date(); });
+      var runLink = function (g) {
+        return h("a", { class: "list-row", href: "#run/" + g.id },
+          h("span", { class: "grow" }, h("span", { class: "who-name", text: title(g) }), h("span", { class: "row-sub", text: dayLabel(g.starts_at) + " " + clock(new Date(g.starts_at)) })),
+          h("span", { class: "num", dir: "ltr", text: fmt(g.participants) }), h("small", { class: "muted", text: "רצים" }));
+      };
+
+      show(h("a", { class: "back", href: "#groups" }, "› כל הקבוצות"),
+        head, stats,
+        h("div", { class: "u-grid" },
+          h("div", { class: "u-col" },
+            openReports.length ? h("section", { class: "card crew-alert", "aria-labelledby": "cr-rep" },
+              h("h2", { class: "ov-card-title", id: "cr-rep", text: openReports.length === 1 ? "דיווח פתוח" : openReports.length + " דיווחים פתוחים" }),
+              openReports.map(function (r) {
+                return h("div", { class: "list-row" }, h("span", { class: "grow" },
+                  h("span", { class: "who-name", text: (REASONS[r.reason] || r.reason) + (r.about && r.about.name ? " · על " + r.about.name : "") }),
+                  h("span", { class: "row-sub", text: ago(r.created_at) + (r.context && r.context.type === "message" ? " · הודעה בצ׳אט" : "") })),
+                  h("a", { class: "btn ink small", href: "#report/" + r.id, text: "לטיפול" }));
+              })) : null,
+            section("cr-mem", "חברים", members.length, members.length ? h("div", { class: "list flat" }, memberRows) : h("p", { class: "note", text: "אין חברים." })),
+            requests.length ? section("cr-req", "בקשות הצטרפות", (d.requests || []).filter(function (r) { return r.status === "pending"; }).length,
+              h("div", { class: "list flat" }, requests), "מנהלי הקבוצה מאשרים. כאן רק רואים.") : null,
+            removals.length ? section("cr-rem", "הוצאו מהקבוצה", removals.length, h("div", { class: "list flat" }, removals),
+              "רק מנהל/ת של הקבוצה יכול/ה להחזיר.") : null),
+          h("div", { class: "u-col" },
+            section("cr-sch", "ריצה קבועה", null, s ? kv([["מתי", scheduleText(s)], ["מרחק", s.km ? fmt(s.km, 1) + " ק״מ" : ""],
+              ["נוצרה אחרונה", s.last_run_date ? shortDate(s.last_run_date) : "עוד לא"], ["עודכנה", ago(s.updated_at)]])
+              : h("p", { class: "note", text: "אין ריצה קבועה. כל חבר/ה יכול/ה לפתוח ריצה לקבוצה." })),
+            section("cr-runs", "ריצות", null, upcoming.length || past.length ? h("div", { class: "list flat" },
+              upcoming.length ? h("span", { class: "list-label", text: "קרובות" }) : null, upcoming.map(runLink),
+              past.length ? h("span", { class: "list-label", text: "היו" }) : null, past.map(runLink)) : h("p", { class: "note", text: "עוד לא היו ריצות." })),
+            section("cr-chat", "צ׳אט", null, kv([["הודעה אחרונה", chat.last_message_at ? ago(chat.last_message_at) : "עוד לא כתבו"],
+              ["הודעות בסך הכל", num(chat.messages)], ["הוסרו", num(chat.removed)], ["הזמנות ממתינות", num(d.invites_pending)]]),
+              "תוכן הצ׳אט לא מוצג, רק סביב הודעה מדווחת."),
+            (d.history || []).length ? section("cr-hist", "היסטוריה", null, kv((d.history || []).map(function (e) {
+              return [CREW_EVENTS[e.event] || e.event, shortDate(e.created_at) + (e.subject && e.subject.name ? " · " + e.subject.name : "")];
+            }))) : null)));
+    }).catch(function (e) {
+      if (missingRpc(e)) return show(h("a", { class: "back", href: "#groups" }, "› כל הקבוצות"), empty("השרת עוד לא עודכן", "דף הקבוצה יופיע אחרי שעדכון v57 יורץ ב־Supabase."));
+      if (/crew_not_found/.test(String(e && e.message))) return show(h("a", { class: "back", href: "#groups" }, "› כל הקבוצות"), empty("הקבוצה לא נמצאה", "אולי היא נמחקה."));
+      fail(e);
+    });
+  }
+
+  // ------------------------------------------------------------------ מרוצים (round 58; v33's catalog) ---
+  // admin_list_race_catalog: the catalog from 30 days ago on. admin_set_race_hidden hides one from the app (logged).
+
+  var races = { rows: [], filter: "all" };
+  var RACE_FILTERS = [["all", "הכל"], ["shown", "מוצגים"], ["hidden", "מוסתרים"]];
+
+  function renderRaces() {
+    loading("טוענים מרוצים…");
+    rpc("admin_list_race_catalog").then(function (rows) {
+      races.rows = rows || [];
+      drawRaces();
+    }).catch(function (e) {
+      if (missingRpc(e)) return show(pageHead("מרוצים"), empty("השרת עוד לא עודכן", "רשימת המרוצים תופיע אחרי שעדכון v33 יורץ."));
+      fail(e);
+    });
+  }
+  function drawRaces() {
+    var f = races.filter;
+    var rows = races.rows.filter(function (r) { return f === "all" || (f === "hidden") === !!r.hidden; });
+    var hiddenN = races.rows.filter(function (r) { return r.hidden; }).length;
+    show(pageHead("מרוצים", h("span", { class: "page-count num", dir: "ltr", text: fmt(races.rows.length) })),
+      h("p", { class: "note", text: "המרוצים שהאפליקציה מציעה ב״מתכוננים ל־״, מלפני 30 יום והלאה. מרוץ מוסתר לא מופיע באפליקציה." + (hiddenN ? " מוסתרים: " + hiddenN + "." : "") }),
+      h("div", { class: "filters", role: "group", "aria-label": "סינון" }, RACE_FILTERS.map(function (x) {
+        return h("button", { type: "button", "aria-pressed": f === x[0] ? "true" : "false", onclick: function () { races.filter = x[0]; drawRaces(); } }, x[1]);
+      })),
+      rows.length ? h("div", { class: "list" }, rows.map(raceRow))
+        : empty(f === "hidden" ? "אין מרוצים מוסתרים" : "אין מרוצים", f === "hidden" ? "" : "מרוצים נוספים לקטלוג מהשרת."));
+  }
+  function raceRow(r) {
+    var past = new Date(r.starts_on + "T23:59:59") < new Date();
+    var sw = h("input", { type: "checkbox", role: "switch", checked: !r.hidden, "aria-label": (r.hidden ? "הצגת " : "הסתרת ") + r.name });
+    sw.addEventListener("change", function () { setRaceHidden(r, !sw.checked, sw); });
+    return h("div", { class: "list-row race-row" + (r.hidden ? " is-hidden" : "") },
+      h("span", { class: "race-date" }, h("b", { class: "num", dir: "ltr", text: shortDay(r.starts_on) }),
+        h("small", { text: past ? "עבר" : inDays(r.starts_on + "T12:00:00") })),
+      h("span", { class: "grow" }, h("span", { class: "who-name", text: r.name }),
+        h("span", { class: "row-sub", text: [r.city, (r.distances || []).join(" · "), r.confidence === "estimated" ? "תאריך משוער" : ""].filter(Boolean).join(" · ") })),
+      r.url && /^https:\/\//.test(r.url) ? h("a", { class: "btn text small", href: r.url, target: "_blank", rel: "noopener noreferrer", text: "לאתר" }) : null,
+      h("label", { class: "switch" }, sw, h("span", { class: "switch-text", text: r.hidden ? "מוסתר" : "מוצג" })));
+  }
+  function setRaceHidden(r, hidden, sw) {
+    sw.disabled = true;
+    rpc("admin_set_race_hidden", { id: r.id, hidden: hidden }).then(function () {
+      r.hidden = hidden;
+      drawRaces();
+      toast(hidden ? "״" + r.name + "״ הוסתר מהאפליקציה" : "״" + r.name + "״ מוצג שוב", "ביטול", function () {
+        rpc("admin_set_race_hidden", { id: r.id, hidden: !hidden }).then(function () { r.hidden = !hidden; if (state.tab === "races") drawRaces(); }).catch(fail);
+      });
+    }).catch(function (e) { sw.disabled = false; sw.checked = !r.hidden; fail(e); });
   }
 
   // ------------------------------------------------------------------ quick search (⌘K, round 38) ---
@@ -3289,6 +3783,13 @@
 
   // ------------------------------------------------------------------ "עוד" (phone, round 38) ---
 
+  function accountCard() {
+    return h("section", { class: "card account" },
+      h("span", { class: "note", text: "מחובר/ת בתור" }),
+      h("b", { dir: "ltr", text: state.email }),
+      h("button", { type: "button", class: "btn quiet", onclick: signOut }, "יציאה"));
+  }
+
   function renderMore() {
     var link = function (href, text, icon) {
       return h("a", { class: "list-row more-row", href: href }, h("span", { class: "dev-icon", "aria-hidden": "true" }, svg(icon)),
@@ -3296,15 +3797,11 @@
     };
     show(pageHead("עוד"),
       h("nav", { class: "list", "aria-label": "עוד מדורים" },
-        link("#overview", "מבט על", "M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z"),
-        link("#log", "יומן פעולות", "M6 3.5h9l3 3v14H6zM9 10h6M9 14h6M9 18h3"),
-        link("#words", "מילים חסומות", "M4 6h16M4 12h10M4 18h7M17 15l4 4M21 15l-4 4"),
-        link("#settings", "הגדרות", "M4 7h10M18 7h2M4 17h4M12 17h8M14 4.5v5M8 14.5v5"),
-        link("#offers", "הטבות ואירועים", "M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 8v10")),
-      h("section", { class: "card" },
-        h("span", { class: "note", text: "מחובר/ת בתור" }),
-        h("b", { dir: "ltr", text: state.email }),
-        h("button", { type: "button", class: "btn quiet", onclick: signOut }, "יציאה")));
+        link("#runs", "ריצות", "M14 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 21l3-6 3 2v4M6.5 11.5l3-3.5 4 1.5 2.5 3h3M11 15l2-5"),
+        link("#offers", "הטבות ואירועים", "M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 8v10"),
+        link("#races", "מרוצים", "M5 21V4M5 4h11l-2 4 2 4H5"),
+        link("#system", "מערכת והגדרות", "M3 12h4l2-5 4 10 2-5h6")),
+      accountCard());
   }
 
   // ------------------------------------------------------------------ boot ---

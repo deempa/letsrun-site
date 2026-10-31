@@ -16,51 +16,44 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap">
 <!-- ?v= changes with every release of admin.css / admin.js: GitHub Pages lets browsers cache them for 10 minutes, and an
      old file next to a new page breaks it. -->
-<link rel="stylesheet" href="admin.css?v=40">
+<link rel="stylesheet" href="admin.css?v=41">
 <!-- supabase-js, pinned (the file the jsDelivr path names never changes; the hash below checks it). -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
         integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
         crossorigin="anonymous" defer></script>
-<script src="admin.js?v=43" defer></script>
+<script src="admin.js?v=44" defer></script>
 </head>
 <body>
-<!-- Admin page for בוא נרוץ (round 24; round 38: sketch A on a computer, sketch B on a phone). Not linked from the
+<!-- Admin page for בוא נרוץ (round 24; round 38: sketch B on a phone; round 58: direction B, a top bar and tiles). Not linked from the
      site. Everything it shows or changes goes through admin_* RPCs that the database allows only for the accounts in
      private.admins. -->
 <div class="shell">
-  <!-- Computer: the ink side menu (right, RTL). -->
-  <aside class="side" id="side" aria-label="ניהול" hidden>
-    <div class="side-brand">
+  <!-- Computer: the ink top bar (round 58, direction B): the sections, search and what waits. -->
+  <header class="side" id="side" aria-label="ניהול" hidden>
+    <a class="side-brand" href="#overview">
       <span class="logo" aria-hidden="true"><span class="logo-fill"></span><span class="logo-ring"></span></span>
-      <span class="side-title"><b>ניהול</b><span>בוא נרוץ</span></span>
-    </div>
-    <button type="button" class="side-search" data-search>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4-4"/></svg>
-      <span>חיפוש</span><kbd dir="ltr">⌘K</kbd>
-    </button>
+      <b class="side-title">ניהול</b>
+    </a>
     <nav class="side-nav" aria-label="מדורים">
-      <a href="#overview" data-nav="overview">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z"/></svg>מבט על</a>
-      <a href="#inbox" data-nav="inbox">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13l2.5-8h11L20 13v6H4zM4 13h4.5l1 2.5h5l1-2.5H20"/></svg>צריך טיפול<span class="count" data-count hidden></span></a>
-      <a href="#users" data-nav="users">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.8a3.3 3.3 0 0 1 0 6.4M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg>משתמשים</a>
-      <a href="#runs" data-nav="runs">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 21l3-6 3 2v4M6.5 11.5l3-3.5 4 1.5 2.5 3h3M11 15l2-5"/></svg>ריצות</a>
-      <a href="#log" data-nav="log">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h9l3 3v14H6zM9 10h6M9 14h6M9 18h3"/></svg>יומן</a>
-      <a href="#words" data-nav="words">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7M17 15l4 4M21 15l-4 4"/></svg>מילים חסומות</a>
-      <a href="#settings" data-nav="settings">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M14 4.5v5M8 14.5v5"/></svg>הגדרות</a>
-      <a href="#offers" data-nav="offers">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 8v10"/></svg>הטבות ואירועים</a>
+      <a href="#overview" data-nav="overview">מבט על</a>
+      <a href="#users" data-nav="users">משתמשים</a>
+      <a href="#runs" data-nav="runs">ריצות</a>
+      <a href="#groups" data-nav="groups">קבוצות</a>
+      <a href="#offers" data-nav="offers">הטבות</a>
+      <a href="#races" data-nav="races">מרוצים</a>
+      <a href="#system" data-nav="system">מערכת</a>
     </nav>
-    <div class="side-foot">
-      <span class="side-email" id="who" dir="ltr"></span>
-      <button type="button" class="side-out" data-sign-out>יציאה</button>
+    <div class="side-end">
+      <button type="button" class="side-search" data-search aria-label="חיפוש (⌘K)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4-4"/></svg>
+        <kbd dir="ltr">⌘K</kbd>
+      </button>
+      <a href="#inbox" data-nav="inbox" class="todo-pill">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13l2.5-8h11L20 13v6H4zM4 13h4.5l1 2.5h5l1-2.5H20"/></svg>
+        <span data-todo-label>משימות</span>
+      </a>
     </div>
-  </aside>
+  </header>
 
   <div class="main">
     <!-- Phone: the ink top bar (sign-in screens show it too). -->
@@ -80,15 +73,18 @@
 
   <!-- Phone: the bottom tabs (sketch B). -->
   <nav class="tabbar" id="tabbar" aria-label="מדורים" hidden>
+    <a href="#overview" data-nav="overview">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z"/></svg>
+      <span>מבט על</span></a>
     <a href="#inbox" data-nav="inbox">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13l2.5-8h11L20 13v6H4zM4 13h4.5l1 2.5h5l1-2.5H20"/></svg>
       <span>משימות</span><span class="count" data-count hidden></span></a>
     <a href="#users" data-nav="users">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.8a3.3 3.3 0 0 1 0 6.4M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg>
       <span>משתמשים</span></a>
-    <a href="#runs" data-nav="runs">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 21l3-6 3 2v4M6.5 11.5l3-3.5 4 1.5 2.5 3h3M11 15l2-5"/></svg>
-      <span>ריצות</span></a>
+    <a href="#groups" data-nav="groups">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20c.6-3.2 2.6-5 5-5s4.4 1.8 5 5M11 20c.6-3.2 2.6-5 5-5s4.4 1.8 5 5"/></svg>
+      <span>קבוצות</span></a>
     <a href="#more" data-nav="more">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg>
       <span>עוד</span></a>
