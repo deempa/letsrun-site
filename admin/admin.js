@@ -50,7 +50,8 @@
     user_deleted: "מחיקת חשבון",
     test_push: "התראת בדיקה",
     offer_save: "שמירת הטבה או אירוע",
-    offer_status: "שינוי מצב של הטבה או אירוע"
+    offer_status: "שינוי מצב של הטבה או אירוע",
+    offer_delete: "מחיקת הטבה או אירוע"
   };
   var PLATFORMS = { ios: "iPhone", android: "Android" };
   // The word typed to confirm a deletion.
@@ -982,6 +983,9 @@
       if (l.action === "offer_save") what += " · " + (OFFER_KIND[l.context.kind] || "") + " · " + (offerStatus[l.context.status] || l.context.status || "");
       else what += " · " + (offerStatus[l.context.from] || l.context.from) + " ← " + (offerStatus[l.context.to] || l.context.to);
       if (Number(l.context.pushes)) what += " · " + (Number(l.context.pushes) === 1 ? "התראה אחת" : fmt(l.context.pushes) + " התראות");
+    }
+    if (l.action === "offer_delete" && l.context) {
+      what += " · " + (OFFER_KIND[l.context.kind] || "") + (l.context.title ? " ״" + l.context.title + "״" : "");
     }
     if (l.action === "app_config_set" && l.context) {
       what += " · " + (CONFIG[l.context.key] || l.context.key) + ": " + configText(l.context.previous) + " ← " + configText(l.context.value);
@@ -3180,7 +3184,7 @@
   }
 
   // ------------------------------------------------------------------ הטבות ואירועים (round 57, v56) ---
-  // admin_offers / admin_save_offer / admin_set_offer_status. The composer on one side, the app's card as a live preview
+  // admin_offers / admin_save_offer / admin_set_offer_status / admin_delete_offer (v59). The composer on one side, the app's card as a live preview
   // on the other, and every offer below it, grouped by state with the four counts (unique runners). Images go to the
   // offer-images bucket (admins with aal2 only), downscaled in the browser to a 1600 px wide JPEG first.
 
@@ -3500,7 +3504,8 @@
       published ? h("button", { type: "button", class: "btn outline", onclick: function () { setOfferStatus(f.id, "draft"); } }, "הפסקה") : null,
       f.id && f.status !== "archived"
         ? h("button", { type: "button", class: "btn text", onclick: function () { setOfferStatus(f.id, "archived"); } }, "העברה לארכיון")
-        : null);
+        : null,
+      f.id ? h("button", { type: "button", class: "btn text danger", onclick: function () { deleteOffer(f.id); } }, "מחיקה") : null);
   }
 
   function drawOfferImage(box) {
@@ -3748,6 +3753,33 @@
     });
   }
 
+  // "מחיקה" (round 62, v59): for good, after a yes. The offer leaves the list (and the composer, when it is open there).
+  function deleteOffer(id) {
+    var row = offers.rows.filter(function (r) { return r.id === id; })[0];
+    var title = (row && row.title) || (offers.form && offers.form.id === id && offers.form.title.trim()) || "";
+    askYes({ title: "למחוק את ״" + title + "״ לתמיד?", text: "אי אפשר לבטל.", ok: "מחיקה", danger: true }).then(function (yes) {
+      if (!yes) return;
+      var btns = document.querySelectorAll("#of-actions .btn");
+      Array.prototype.forEach.call(btns, function (b) { b.disabled = true; });
+      var gone = function () {
+        offers.rows = offers.rows.filter(function (r) { return r.id !== id; });
+        if (state.tab !== "offers" || !offers.ui) return;
+        if (offers.form && offers.form.id === id) { offers.form = offerForm(null); drawOfferForm(); }
+        drawOfferList();
+        loadOffers();
+      };
+      rpc("admin_delete_offer", { offer: id }).then(function () {
+        toast("נמחק");
+        gone();
+      }).catch(function (e) {
+        Array.prototype.forEach.call(btns, function (b) { b.disabled = false; });
+        if (missingRpc(e)) return toast("השרת עוד לא עודכן לגרסה הזו (v59). מריצים את העדכון ב־Supabase.");
+        if (/offer_not_found/.test(String(e && e.message))) { toast("הפרסום כבר לא קיים."); return gone(); }
+        fail(e);
+      });
+    });
+  }
+
   function refreshOffer(id) {
     return loadOffers().then(function () {
       if (state.tab !== "offers" || !offers.form || offers.form.id !== id) return;
@@ -3758,13 +3790,14 @@
     });
   }
 
-  // A yes / no question (the push confirmation). Resolves true on yes.
+  // A yes / no question (the push confirmation; o.danger: a red yes, for a delete). Resolves true on yes.
   function askYes(o) {
     return new Promise(function (resolve) {
       var dlg = $("ask");
       $("ask-title").textContent = o.title;
       $("ask-text").textContent = o.text || "";
       $("ask-ok").textContent = o.ok;
+      $("ask-ok").className = "btn " + (o.danger ? "danger" : "ink");
       var done = function (v) {
         $("ask-form").onsubmit = null;
         $("ask-cancel").onclick = null;

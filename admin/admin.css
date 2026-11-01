@@ -135,6 +135,7 @@ kbd { font: 800 11px/1 var(--num); padding: 4px 6px; border-radius: 6px; backgro
 .btn.quiet { background: var(--card); color: var(--ink); border: 1.5px solid var(--hairline); }
 .btn.text { background: transparent; color: var(--soft); font-weight: 600; padding: 0 12px; }
 .btn.danger { background: var(--danger); color: #FFFFFF; }
+.btn.text.danger { background: transparent; color: var(--danger); }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .actions .btn.ink, .actions .btn.outline, .actions .btn.quiet { flex: 1; min-width: 120px; }
 
