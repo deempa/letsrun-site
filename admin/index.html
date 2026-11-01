@@ -16,12 +16,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap">
 <!-- ?v= changes with every release of admin.css / admin.js: GitHub Pages lets browsers cache them for 10 minutes, and an
      old file next to a new page breaks it. -->
-<link rel="stylesheet" href="admin.css?v=42">
+<link rel="stylesheet" href="admin.css?v=43">
 <!-- supabase-js, pinned (the file the jsDelivr path names never changes; the hash below checks it). -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
         integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
         crossorigin="anonymous" defer></script>
-<script src="admin.js?v=45" defer></script>
+<script src="admin.js?v=46" defer></script>
 </head>
 <body>
 <!-- Admin page for בוא נרוץ (round 24; round 38: sketch B on a phone; round 58: direction B, a top bar and tiles). Not linked from the
@@ -207,7 +207,7 @@
   </form>
 </dialog>
 
-<!-- Deleting an account (round 38): what goes, what stays, a reason, and the word "מחיקה". -->
+<!-- Deleting one account or several (round 38; no reason or typed word since round 66): what goes, what stays. -->
 <dialog id="delete" class="sheet wide" aria-labelledby="delete-title">
   <form class="stack" id="delete-form" novalidate>
     <div class="dlg-head">
@@ -227,14 +227,7 @@
       <span>רוצה רק לעצור? השעיה הפיכה.</span>
       <button type="button" class="btn text" id="delete-suspend">השעיה במקום</button>
     </div>
-    <label class="field">
-      <span class="label">סיבה (חובה, נשמרת ביומן)</span>
-      <textarea id="delete-reason" rows="2" maxlength="500" required></textarea>
-    </label>
-    <label class="field">
-      <span class="label">כדי לאשר, מקלידים: <b>מחיקה</b></span>
-      <input type="text" id="delete-word" autocomplete="off" spellcheck="false" required>
-    </label>
+    <p class="delete-who" id="delete-who" hidden></p>
     <p class="form-error" id="delete-error" role="alert" hidden></p>
     <div class="actions">
       <button type="submit" class="btn danger" id="delete-ok" disabled>מחיקה לצמיתות</button>

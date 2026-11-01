@@ -54,8 +54,8 @@
     offer_delete: "מחיקת הטבה או אירוע"
   };
   var PLATFORMS = { ios: "iPhone", android: "Android" };
-  // The word typed to confirm a deletion.
-  var DELETE_WORD = "מחיקה";
+  // The log's reason for a deletion from the console (admin_delete_user requires one; the admin types none).
+  var DELETE_REASON = "נמחק מהניהול";
   var SOURCES = { onboarding: "באונבורדינג", settings: "בהגדרות" };
   var RESEND_URL = "https://resend.com/broadcasts";
   // Rate limit actions (private.rate_limits), in the order the settings tab shows them.
@@ -2055,11 +2055,28 @@
     var th = function (t, cls) { return h("th", { scope: "col", class: cls || null, text: t }); };
     return h("div", { class: "table-box" }, h("table", { class: "utable" },
       h("thead", null, h("tr", null,
-        h("th", { scope: "col", class: "c-check" }, h("span", { class: "sr-only", text: "בחירה" })),
+        h("th", { scope: "col", class: "c-check" }, allBox(rows)),
         th("משתמש/ת", "c-who"), th("אזור", "c-area"), th("רמת אמון", "c-trust"), th("ריצות", "c-runs"), th("הצטרפות", "c-joined"),
         th("פעילות", "c-active"), th("מכשיר", "c-device"), th("סטטוס", "c-status"),
         h("th", { scope: "col", class: "c-menu" }, h("span", { class: "sr-only", text: "פעולות" })))),
       h("tbody", null, rows.map(userTr))));
+  }
+
+  // Ticks or clears every loaded row.
+  function allBox(rows) {
+    var cb = h("input", { type: "checkbox", "aria-label": "בחירת כל המשתמשים ברשימה" });
+    cb.addEventListener("change", function () {
+      rows.forEach(function (u) {
+        if (cb.checked) users.selected[u.id] = u;
+        else delete users.selected[u.id];
+      });
+      Array.prototype.forEach.call(document.querySelectorAll(".utable tbody input[type=checkbox]"), function (c) {
+        c.checked = cb.checked;
+        c.closest("tr").classList.toggle("selected", cb.checked);
+      });
+      drawBulk();
+    });
+    return cb;
   }
 
   function userTr(u) {
@@ -2138,7 +2155,7 @@
     });
   }
 
-  // Several rows ticked: suspend them together (one reason for all).
+  // Several rows ticked: suspend them together (one reason for all), or delete them.
   function drawBulk() {
     var slot = $("bulk-slot");
     if (!slot) return;
@@ -2148,6 +2165,7 @@
     slot.appendChild(h("div", { class: "bulk", role: "region", "aria-label": "פעולות על הנבחרים" },
       h("b", { text: ids.length === 1 ? "נבחר/ה אחד/ת" : ids.length + " נבחרו" }),
       h("button", { type: "button", class: "btn ink small", onclick: bulkSuspend }, "השעיה…"),
+      h("button", { type: "button", class: "btn danger small", onclick: bulkDelete }, "מחיקה…"),
       h("button", { type: "button", class: "btn text small", onclick: function () {
         users.selected = {};
         Array.prototype.forEach.call(document.querySelectorAll(".utable input[type=checkbox]"), function (c) { c.checked = false; });
@@ -2265,7 +2283,8 @@
             svg("M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9zM10 19a2 2 0 0 0 4 0"), "התראת בדיקה"),
           p.is_admin ? null : suspended
             ? h("button", { type: "button", class: "btn ink", onclick: function () { unsuspend(p); } }, "ביטול השעיה")
-            : h("button", { type: "button", class: "btn ink", onclick: function () { suspend(p, null); } }, "השעיה…")));
+            : h("button", { type: "button", class: "btn ink", onclick: function () { suspend(p, null); } }, "השעיה…"),
+          p.is_admin ? null : h("button", { type: "button", class: "btn danger", onclick: function () { openDelete(u); } }, "מחיקה…")));
 
       var counts = { runs: (u.runs || []).length + (u.joined_runs || []).length,
         reports: (u.reports_against || []).length + (u.reports_by || []).length, devices: (u.devices || []).length, log: (u.log || []).length };
@@ -2494,8 +2513,9 @@
     });
   }
 
-  // ------------------------------------------------------------------ deleting an account (round 38) ---
-  // What goes and what stays, from the card's delete_impact; a reason; the word "מחיקה". admin_delete_user (v36).
+  // ------------------------------------------------------------------ deleting accounts (round 38, 66) ---
+  // One account (what goes and what stays, from the card's delete_impact) or several ticked in the table. No reason
+  // to type (round 66): the log gets DELETE_REASON. admin_delete_user (v36, v41).
 
   function askDelete(id) {
     toast("טוענים את פרטי החשבון…");
@@ -2508,61 +2528,112 @@
   function openDelete(u) {
     var p = u.profile || {}, impact = u.delete_impact || {};
     if (p.is_admin) return toast(errorText({ message: "cannot_delete_admin" }));
-    var dlg = $("delete"), reason = $("delete-reason"), word = $("delete-word"), ok = $("delete-ok"), err = $("delete-error");
     var runs = Number(impact.upcoming_runs) || 0, people = Number(impact.upcoming_participants) || 0, reps = Number(impact.reports) || 0;
-    $("delete-title").textContent = "מחיקת החשבון של " + nameAge(p);
-    var gone = [
-      "הפרופיל, התמונות והמייל",
-      runs ? (runs === 1 ? "ריצה קרובה אחת שארגן/ה תבוטל" : runs + " ריצות קרובות שארגן/ה יבוטלו") +
-        (people ? ", ו־" + (people === 1 ? "משתתף/ת אחד/ת יקבל/ו" : people + " משתתפים יקבלו") + " התראה" : "") : "אין ריצות קרובות שארגן/ה",
-      "המקומות שלו/ה בריצות, ההודעות בצ׳אטים, החיבורים והקבוצות",
-      reps ? (reps === 1 ? "דיווח אחד" : reps + " דיווחים") + " עליו/ה או שלו/ה" : null,
-      p.newsletter && p.newsletter.subscribed ? "המנוי לניוזלטר (יוסר גם מ־Resend)" : null
-    ].filter(Boolean);
+    deleteDialog({
+      title: "מחיקת החשבון של " + nameAge(p),
+      gone: [
+        "הפרופיל, התמונות והמייל",
+        runs ? (runs === 1 ? "ריצה קרובה אחת שארגן/ה תבוטל" : runs + " ריצות קרובות שארגן/ה יבוטלו") +
+          (people ? ", ו־" + (people === 1 ? "משתתף/ת אחד/ת יקבל/ו" : people + " משתתפים יקבלו") + " התראה" : "") : "אין ריצות קרובות שארגן/ה",
+        "המקומות שלו/ה בריצות, ההודעות בצ׳אטים, החיבורים והקבוצות",
+        reps ? (reps === 1 ? "דיווח אחד" : reps + " דיווחים") + " עליו/ה או שלו/ה" : null,
+        p.newsletter && p.newsletter.subscribed ? "המנוי לניוזלטר (יוסר גם מ־Resend)" : null
+      ],
+      suspend: p.suspended_at ? null : function () { suspend(p, null); },
+      run: function (ok, err, close) {
+        rpc("admin_delete_user", { target: p.id, reason: DELETE_REASON }).then(function (res) {
+          close();
+          var n = (res && res.runs_cancelled) || 0;
+          toast("החשבון נמחק" + (n ? " · " + (n === 1 ? "ריצה אחת בוטלה" : n + " ריצות בוטלו") : ""));
+          reloadOpen().catch(function () { /* the counts refresh next time */ }).then(function () { updateCounts(); go("#users"); });
+        }).catch(function (e) {
+          ok.disabled = false;
+          if (code(e) === "user_not_found") { close(); toast("החשבון כבר נמחק"); return go("#users"); }
+          if (["invalid_argument", "cannot_delete_admin", "other"].indexOf(code(e)) >= 0 && !missingRpc(e)) {
+            err.textContent = errorText(e);
+            err.hidden = false;
+            return;
+          }
+          close();
+          fail(e);
+        });
+      }
+    });
+  }
+
+  // Several rows ticked: deleted one after another. Admins and the signed-in admin are skipped (the server refuses
+  // them); an account already gone counts as deleted.
+  function bulkDelete() {
+    var list = Object.keys(users.selected).map(function (k) { return users.selected[k]; });
+    if (!list.length) return;
+    if (list.length === 1) return askDelete(list[0].id);
+    var names = list.slice(0, 6).map(nameAge).join(" · ") + (list.length > 6 ? " ועוד " + (list.length - 6) : "");
+    deleteDialog({
+      title: "מחיקת " + list.length + " חשבונות",
+      who: names,
+      gone: [
+        "הפרופילים, התמונות והמיילים",
+        "ריצות קרובות שהם ארגנו יבוטלו, והמשתתפים יקבלו התראה",
+        "המקומות שלהם בריצות, ההודעות בצ׳אטים, החיבורים והקבוצות"
+      ],
+      run: function (ok, err, close) {
+        var done = 0, skipped = 0, total = list.length;
+        var next = function () {
+          if (!list.length) {
+            close();
+            toast((done === 1 ? "חשבון אחד נמחק" : done + " חשבונות נמחקו") + (skipped ? " · " + skipped + " דולגו (מנהלים)" : ""));
+            return reloadOpen().catch(function () { /* next time */ }).then(function () { updateCounts(); loadUsers(true); });
+          }
+          ok.textContent = "מוחקים… " + (done + skipped + 1) + "/" + total;
+          var u = list.shift();
+          rpc("admin_delete_user", { target: u.id, reason: DELETE_REASON }).then(function () { done++; next(); }).catch(function (e) {
+            var c = code(e);
+            if (c === "user_not_found") { done++; return next(); }
+            if (c === "cannot_delete_admin" || c === "invalid_argument") { skipped++; return next(); }
+            close();
+            if (done) toast(done + " נמחקו, השאר לא");
+            fail(e);
+            loadUsers(true);
+          });
+        };
+        next();
+      }
+    });
+  }
+
+  // The delete sheet: o.title, o.gone (lines; nulls skipped), o.who (names, for several), o.suspend (offers a
+  // suspension instead), o.run(okButton, errorLine, close).
+  function deleteDialog(o) {
+    var dlg = $("delete"), ok = $("delete-ok"), err = $("delete-error");
+    $("delete-title").textContent = o.title;
     var gl = $("delete-gone"), kl = $("delete-kept");
     gl.textContent = "";
     kl.textContent = "";
-    gone.forEach(function (t) { gl.appendChild(h("li", { text: t })); });
-    kl.appendChild(h("li", { text: "שורה ביומן הפעולות עם הסיבה, בלי שם ובלי מייל (90 יום)" }));
-    $("delete-suggest").hidden = !!p.suspended_at;
-    reason.value = "";
-    word.value = "";
+    o.gone.filter(Boolean).forEach(function (t) { gl.appendChild(h("li", { text: t })); });
+    kl.appendChild(h("li", { text: "שורה ביומן הפעולות, בלי שם ובלי מייל (90 יום)" }));
+    kl.appendChild(h("li", { text: "חסימה: אי אפשר להירשם שוב עם אותו חשבון או מייל" }));
+    $("delete-who").textContent = o.who || "";
+    $("delete-who").hidden = !o.who;
+    $("delete-suggest").hidden = !o.suspend;
     err.hidden = true;
-    ok.disabled = true;
-    var check = function () { ok.disabled = !(reason.value.trim() && word.value.trim() === DELETE_WORD); };
-    reason.oninput = check;
-    word.oninput = check;
+    ok.disabled = false;
+    ok.textContent = "מחיקה לצמיתות";
     var close = function () {
       $("delete-form").onsubmit = null;
       if (dlg.open) dlg.close();
     };
     $("delete-cancel").onclick = close;
-    $("delete-suspend").onclick = function () { close(); suspend(p, null); };
+    $("delete-suspend").onclick = function () { close(); if (o.suspend) o.suspend(); };
     $("delete-form").onsubmit = function (ev) {
       ev.preventDefault();
-      check();
       if (ok.disabled) return;
       ok.disabled = true;
-      rpc("admin_delete_user", { target: p.id, reason: reason.value.trim() }).then(function (res) {
-        close();
-        var n = (res && res.runs_cancelled) || 0;
-        toast("החשבון נמחק" + (n ? " · " + (n === 1 ? "ריצה אחת בוטלה" : n + " ריצות בוטלו") : ""));
-        reloadOpen().catch(function () { /* the counts refresh next time */ }).then(function () { updateCounts(); go("#users"); });
-      }).catch(function (e) {
-        ok.disabled = false;
-        if (code(e) === "user_not_found") { close(); toast("החשבון כבר נמחק"); return go("#users"); }
-        if (["invalid_argument", "cannot_delete_admin", "other"].indexOf(code(e)) >= 0 && !missingRpc(e)) {
-          err.textContent = errorText(e);
-          err.hidden = false;
-          return;
-        }
-        close();
-        fail(e);
-      });
+      err.hidden = true;
+      o.run(ok, err, close);
     };
     if (typeof dlg.showModal === "function") dlg.showModal();
     else dlg.setAttribute("open", "");
-    reason.focus();
+    $("delete-cancel").focus();
   }
 
   // ------------------------------------------------------------------ test push (round 38) ---

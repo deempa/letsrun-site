@@ -481,9 +481,12 @@ a.who:hover .who-name { text-decoration: underline; }
   position: sticky; top: calc(72px + env(safe-area-inset-top, 0px)); z-index: 4; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   background: var(--ink); color: #FFFFFF; border-radius: 16px; padding: 8px; padding-inline-start: 16px;
 }
+/* The slot is only as tall as the bar: without this the bar could never stick. */
+#bulk-slot { display: contents; }
 .bulk b { flex: 1; }
 .bulk .btn.ink { background: #FFFFFF; color: var(--ink); }
 .bulk .btn.text { color: #D8D8D4; }
+.bulk .btn.danger { background: var(--danger); color: #FFFFFF; }
 .bulk :focus-visible { outline-color: #D4FF3F; }
 .utable td.c-meta { display: none; }
 @media (max-width: 959px) {
@@ -612,7 +615,7 @@ a.who:hover .who-name { text-decoration: underline; }
 .impact ul { margin: 6px 0 0; padding-inline-start: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; }
 .suggest { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--surface); border-radius: 14px; padding: 4px; padding-inline-start: 14px; font-size: 14px; }
 .suggest .btn.text { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-#delete-word { font-weight: 800; }
+.delete-who { margin: 0; font-size: 14px; line-height: 1.45; background: var(--surface); border-radius: 14px; padding: 10px 14px; }
 
 /* Quick search */
 .sheet.finder { padding: 0; width: min(94vw, 620px); margin: 12vh auto auto; overflow: hidden; }
