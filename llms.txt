@@ -15,6 +15,9 @@
 - [שיטת 80/20](https://letsrun.co.il/blog/run-slow-80-20.html): לרוץ לאט כדי לרוץ מהר
 - [איך לבחור שותף/ה לריצה לפי קצב](https://letsrun.co.il/blog/pace-partner.html)
 - [ריצה ראשונה עם מישהו חדש](https://letsrun.co.il/blog/safe-first-run.html)
+- [כאב בריצה: מתי להמשיך ומתי לעצור](https://letsrun.co.il/blog/pain-when-running.html): שיטת הרמזור, הכלל של 30 הימים, הפציעות הנפוצות
+- [איך לבחור נעלי ריצה](https://letsrun.co.il/blog/running-shoes.html): פרונציה, ריפוד, נעלי קרבון ומתי להחליף
+- [כאב בצד בריצה](https://letsrun.co.il/blog/side-stitch.html): למה זה קורה ומה עוזר
 
 ## מדיניות
 - [פרטיות](https://letsrun.co.il/privacy/)
