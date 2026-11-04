@@ -1535,7 +1535,7 @@
       var pct = people ? Math.round((withTok / people) * 100) : 0;
       var bits = [PLATFORMS.ios + " " + fmt(d.ios_users), PLATFORMS.android + " " + fmt(d.android_users),
         fmt(d.users_without_token) + " בלי מכשיר"];
-      var week = "השבוע: " + fmt(o.delivered) + " נמסרו" + (Number(o.no_tokens) ? " · " + fmt(o.no_tokens) + " בלי מכשיר" : "") +
+      var week = "לאחרונה: " + fmt(o.delivered) + " נמסרו" + (Number(o.no_tokens) ? " · " + fmt(o.no_tokens) + " בלי מכשיר" : "") +
         (Number(o.failed) ? " · " + fmt(o.failed) + " נכשלו" : "");
       fill(ui.push, statusMark(withTok ? (pct < 40 ? "warn" : "ok") : "warn"),
         h("span", { class: "grow" }, h("span", { class: "ov-row-title", text: "משתמשים עם פוש" }),
