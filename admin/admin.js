@@ -52,7 +52,11 @@
     offer_save: "שמירת הטבה או אירוע",
     offer_status: "שינוי מצב של הטבה או אירוע",
     offer_delete: "מחיקת הטבה או אירוע",
-    ban_lifted: "הסרת חסימה"
+    offer_test_push: "התראת בדיקה על הטבה או אירוע",
+    ban_lifted: "הסרת חסימה",
+    coach_save: "שמירת מאמן",
+    coach_status: "שינוי מצב של מאמן",
+    coach_delete: "מחיקת מאמן"
   };
   var PLATFORMS = { ios: "iPhone", android: "Android" };
   // The log's reason for a deletion from the console (admin_delete_user requires one; the admin types none).
@@ -77,7 +81,7 @@
     ["crew_schedule", "שינויים בריצה הקבועה"],
     ["activity_insert", "שמירת ריצות"],
     ["meeting_points", "חיפושי ״איפה נפגשים?״"],
-    ["offer_event", "פתיחות, העתקות קוד ולחיצות על הטבות"]
+    ["offer_event", "פתיחות, העתקות קוד ולחיצות על הטבות ומאמנים"]
   ];
   var CONFIG = {
     min_version_ios: "iOS · גרסה מינימלית",
@@ -574,12 +578,12 @@
 
   // A computer gets the top bar, a phone the bottom tabs; both start on "מבט על" (round 58).
   var WIDE = window.matchMedia("(min-width: 960px)");
-  var TABS = ["overview", "inbox", "users", "runs", "groups", "offers", "races", "system", "data", "log", "words", "settings", "more"];
+  var TABS = ["overview", "inbox", "users", "runs", "groups", "offers", "coaches", "races", "system", "data", "log", "words", "settings", "more"];
   // מערכת's own tabs (the top bar marks מערכת for each).
   var SYSTEM_TABS = [["system", "מצב"], ["data", "נתונים וגרפים"], ["log", "יומן"], ["words", "מילים חסומות"], ["settings", "הגדרות"]];
   var IN_SYSTEM = { system: true, data: true, log: true, words: true, settings: true };
   // On a phone these live under "עוד".
-  var UNDER_MORE = { runs: true, offers: true, races: true, system: true, data: true, log: true, words: true, settings: true };
+  var UNDER_MORE = { runs: true, offers: true, coaches: true, races: true, system: true, data: true, log: true, words: true, settings: true };
 
   function setTab(tab) {
     state.tab = tab;
@@ -611,6 +615,7 @@
     if (tab === "runs") return renderRuns();
     if (tab === "groups") return renderGroups();
     if (tab === "offers") return renderOffers();
+    if (tab === "coaches") return renderCoaches();
     if (tab === "races") return renderRaces();
     if (tab === "system") return renderHealth();
     if (tab === "data") return renderData();
@@ -986,8 +991,17 @@
       else what += " · " + (offerStatus[l.context.from] || l.context.from) + " ← " + (offerStatus[l.context.to] || l.context.to);
       if (Number(l.context.pushes)) what += " · " + (Number(l.context.pushes) === 1 ? "התראה אחת" : fmt(l.context.pushes) + " התראות");
     }
+    if (l.action === "offer_test_push" && l.context) {
+      what += " · " + (OFFER_KIND[l.context.kind] || "") + " · נשלחה ל־" + fmt(Number(l.context.queued) || 0) + " מתוך " + fmt(Number(l.context.people) || 0);
+    }
     if (l.action === "offer_delete" && l.context) {
       what += " · " + (OFFER_KIND[l.context.kind] || "") + (l.context.title ? " ״" + l.context.title + "״" : "");
+    }
+    if ((l.action === "coach_save" || l.action === "coach_status" || l.action === "coach_delete") && l.context) {
+      var coachStatus = { draft: "טיוטה", published: "פורסם", archived: "ארכיון" };
+      if (l.context.name) what += " · " + l.context.name;
+      if (l.action === "coach_save") what += " · " + (coachStatus[l.context.status] || l.context.status || "");
+      if (l.action === "coach_status") what += " · " + (coachStatus[l.context.from] || l.context.from) + " ← " + (coachStatus[l.context.to] || l.context.to);
     }
     if (l.action === "app_config_set" && l.context) {
       what += " · " + (CONFIG[l.context.key] || l.context.key) + ": " + configText(l.context.previous) + " ← " + configText(l.context.value);
@@ -3336,6 +3350,7 @@
   // admin_offers / admin_save_offer / admin_set_offer_status / admin_delete_offer (v59). The composer on one side, the app's card as a live preview
   // on the other, and every offer below it, grouped by state with the four counts (unique runners). Images go to the
   // offer-images bucket (admins with aal2 only), downscaled in the browser to a 1600 px wide JPEG first.
+  // Round 71 (v70): the push on publish, a card drawn on a canvas (cardSpec, drawCard), and a test send to chosen people.
 
   var OFFER_KINDS = [["offer", "הטבה"], ["event", "אירוע"], ["update", "עדכון"]];
   var OFFER_KIND = { offer: "הטבה", event: "אירוע", update: "עדכון" };
@@ -3374,10 +3389,16 @@
     [/^an area|^area_label|^lat|^radius/, "האזור: עיר ורדיוס של 1 עד 100 ק״מ, או כל הארץ."],
     [/^ends_at is required/, "חסר תאריך סיום."],
     [/^ends_at/, "הסיום צריך להיות אחרי ההתחלה."],
-    [/^status/, "אפשר לשמור רק כטיוטה או לפרסם."]
+    [/^status/, "אפשר לשמור רק כטיוטה או לפרסם."],
+    [/^push_title/, "המשפט שתופס: 2 עד 60 תווים."],
+    [/^push_body/, "מה מחכה בפנים: עד 140 תווים."],
+    [/^push_image_url/, "הכרטיס צריך לעלות מכאן (offer-images)."]
   ];
 
-  var offers = { rows: [], token: 0, form: null, editing: null, ui: null, uploading: false };
+  var offers = { rows: [], token: 0, form: null, editing: null, ui: null, uploading: false,
+    // The test send: the saved list (null until read), who is ticked, the last answer per person, and the card lines
+    // typed this session, per offer: the database keeps the picture, not its lines.
+    testers: null, testersError: null, picked: {}, results: {}, cards: {}, busy: false };
 
   function pad2(n) { return (n < 10 ? "0" : "") + n; }
   // A datetime-local / date / time value (this browser's time zone) ↔ ISO.
@@ -3419,8 +3440,9 @@
       end.setHours(23, 59, 0, 0);
       return { id: null, kind: "offer", title: "", body: "", business_name: "", address: "", code: "", link_url: "",
         image_url: "", event_date: "", event_time: "19:00", sponsored: false, city: "", radius_km: 10, starts: "",
-        ends: localParts(end.toISOString()).both, endsTouched: false, push_requested: false, pushed_at: null, status: "draft",
-        state: null };
+        ends: localParts(end.toISOString()).both, endsTouched: false, push_requested: true, pushed_at: null, status: "draft",
+        state: null, push_title: "", push_body: "", push_image_url: "", saved_push: false, card_big: "", card_small: "",
+        card_big_touched: false, card_small_touched: false, card_saved_sig: null, card_show_saved: false };
     }
     var ev = localParts(o.event_at);
     var city = "";
@@ -3429,11 +3451,18 @@
       var known = OFFER_CITIES.some(function (c) { return c[0] === o.area_label; });
       if (!known) OFFER_CITIES.push([o.area_label, o.lat, o.lon]);
     }
-    return { id: o.id, kind: o.kind, title: o.title || "", body: o.body || "", business_name: o.business_name || "",
+    var kept = offers.cards[o.id];
+    var form = { id: o.id, kind: o.kind, title: o.title || "", body: o.body || "", business_name: o.business_name || "",
       address: o.address || "", code: o.code || "", link_url: o.link_url || "", image_url: o.image_url || "",
       event_date: ev.date, event_time: ev.time || "19:00", sponsored: !!o.sponsored, city: city,
       radius_km: o.radius_km || 10, starts: localParts(o.starts_at).both, ends: localParts(o.ends_at).both, endsTouched: true,
-      push_requested: !!o.push_requested, pushed_at: o.pushed_at, status: o.status, state: o.state };
+      push_requested: !!o.push_requested, pushed_at: o.pushed_at, status: o.status, state: o.state,
+      push_title: o.push_title || "", push_body: o.push_body || "", push_image_url: o.push_image_url || "",
+      saved_push: !!o.push_requested, card_big: kept ? kept.big : "", card_small: kept ? kept.small : "",
+      card_big_touched: !!(kept && kept.bigTouched), card_small_touched: !!(kept && kept.smallTouched),
+      card_saved_sig: null, card_show_saved: !!o.push_image_url && !kept };
+    if (o.push_image_url) form.card_saved_sig = kept && kept.sig ? kept.sig : cardSig(form);
+    return form;
   }
 
   function renderOffers() {
@@ -3448,6 +3477,7 @@
       listBox);
     drawOfferForm();
     loadOffers();
+    loadTesters();
   }
 
   function loadOffers() {
@@ -3459,8 +3489,15 @@
       // The open offer may have moved (published, paused, ended): keep its state chip right.
       if (offers.form && offers.form.id) {
         var cur = offers.rows.filter(function (r) { return r.id === offers.form.id; })[0];
-        if (cur) { offers.form.state = cur.state; offers.form.status = cur.status; offers.form.pushed_at = cur.pushed_at; drawOfferActions(); }
+        if (cur) {
+          offers.form.state = cur.state;
+          offers.form.status = cur.status;
+          offers.form.pushed_at = cur.pushed_at;
+          offers.form.saved_push = !!cur.push_requested;
+          drawOfferActions();
+        }
       }
+      drawPushWarning();
     }).catch(function (e) {
       if (token !== offers.token || !offers.ui) return;
       fill(offers.ui.list, missingRpc(e)
@@ -3501,6 +3538,8 @@
         h("span", { class: "run-sub", text: [OFFER_KIND[o.kind] || o.kind, offerDays(o), offerAudience(o)].join(" · ") }),
         h("span", { class: "chips" },
           o.sponsored ? h("span", { class: "chip info", text: "בשיתוף " + (o.business_name || "") }) : null,
+          o.pushed_at && o.push_count !== null && o.push_count !== undefined
+            ? h("span", { class: "chip ok", text: "נשלחה ל־" + fmt(o.push_count) + " · פתחו " + fmt(o.open_count) + (o.code ? " · העתיקו קוד " + fmt(o.copy_count) : "") }) :
           o.pushed_at ? h("span", { class: "chip ok", text: "התראה נשלחה " + dM(o.pushed_at) }) :
             (o.push_requested && o.status === "published" && o.state === "scheduled"
               ? h("span", { class: "chip", text: "התראה בתחילת התוקף" }) : null))),
@@ -3600,6 +3639,48 @@
     };
     var pushed = !!f.pushed_at;
 
+    var pushInput = h("input", { type: "checkbox", id: "of-push_requested", disabled: pushed || null });
+    pushInput.checked = !!f.push_requested;
+    pushInput.addEventListener("change", function () {
+      f.push_requested = pushInput.checked;
+      f.dirty = true;
+      drawOfferForm();
+      if ($("of-push_requested")) $("of-push_requested").focus();
+    });
+    var pushSwitch = h("label", { class: "of-check of-push-switch" }, pushInput,
+      h("span", null, h("b", { text: "שליחת התראה" }),
+        h("span", { class: "note", text: pushed
+          ? "ההתראה כבר נשלחה (" + stamp(f.pushed_at) + "). פרסום נשלח בהתראה פעם אחת בלבד."
+          : "רק למי שאישרו ״הטבות ומרוצים״ ונמצאים באזור." })));
+
+    // The words, the card's lines and the live preview. Only while the switch is on.
+    var pushFields = function () {
+      var line = function (key, label, touched, max) {
+        var input = h("input", { id: "of-" + key, type: "text", maxlength: max, autocomplete: "off" });
+        input.value = f[key] || "";
+        input.addEventListener("input", function () {
+          f[key] = input.value;
+          f[touched] = true;
+          changed();
+        });
+        return h("label", { class: "field", "data-field": key }, h("span", { class: "label", text: label }), input);
+      };
+      return h("div", { class: "of-push" },
+        h("div", { class: "of-fields" },
+          h("div", { class: "span2 of-title-field" },
+            text("push_title", "המשפט שתופס", { max: 60 }),
+            h("span", { class: "note", id: "of-push-count", "aria-live": "polite" })),
+          text("push_body", "מה מחכה בפנים", { span: true, max: 140 })),
+        f.kind !== "update"
+          ? h("div", { class: "field" }, h("span", { class: "label", text: "על הכרטיס" }),
+            h("div", { class: "of-pair" },
+              line("card_big", "השורה הגדולה", "card_big_touched", 12),
+              line("card_small", "השורה הקטנה", "card_small_touched", 40)))
+          : null,
+        h("div", { id: "of-push-preview" }),
+        h("p", { class: "of-warn", id: "of-push-warn", hidden: true }));
+    };
+
     var fields = h("div", { class: "of-fields" },
       text("title", "כותרת", { span: true, max: 80, placeholder: f.kind === "event" ? "ריצת לילה ב[מקום]" : "15% הנחה על נעלי ריצה" }),
       text("body", "טקסט", { span: true, area: true, max: 500 }),
@@ -3632,13 +3713,15 @@
           h("span", { class: "note", text: f.id ? "" : "ריק = מרגע הפרסום" })),
         h("label", { class: "field" }, h("span", { class: "label", text: "נגמר" }), ends)),
       check("sponsored", "בית העסק משלם על הפרסום", "הכרטיס יסומן ״בשיתוף " + (f.business_name.trim() || "[שם בית העסק]") + "״."),
-      check("push_requested", "לשלוח גם התראה",
-        pushed ? "ההתראה כבר נשלחה (" + stamp(f.pushed_at) + "). פרסום נשלח בהתראה פעם אחת בלבד."
-          : "רק למי שהפעיל ״הטבות ואירועים״ בהגדרות ונמצא באזור. עד התראה אחת בשבוע.", pushed),
+      pushSwitch,
+      f.push_requested || pushed ? pushFields() : null,
+      f.push_requested || pushed ? testSection() : null,
       err,
       actions));
     drawOfferActions();
     drawOfferPreview();
+    drawTesters();
+    drawPushWarning();
   }
 
   function drawOfferActions() {
@@ -3754,6 +3837,7 @@
     var box = offers.ui && offers.ui.preview;
     if (!box) return;
     var f = offers.form;
+    drawPushPreview();
     var title = f.title.trim() || (f.kind === "event" ? "שם האירוע" : f.kind === "update" ? "כותרת העדכון" : "כותרת ההטבה");
     var biz = f.business_name.trim();
     var addr = f.address.trim();
@@ -3815,7 +3899,11 @@
       starts_at: localIso(f.starts),
       ends_at: localIso(f.ends),
       status: status,
-      push_requested: !!f.push_requested
+      push_requested: !!f.push_requested,
+      push_title: f.push_title.trim() || null,
+      push_body: f.push_body.trim() || null,
+      // A picture that no longer matches the lines goes: the next send makes it again.
+      push_image_url: f.kind !== "update" && f.push_image_url && f.card_saved_sig === cardSig(f) ? f.push_image_url : null
     };
     if (f.id) p.id = f.id;
     return p;
@@ -3824,6 +3912,8 @@
   // What the form says before it goes to the server (the server checks it all again).
   function offerProblem(p) {
     if (p.title.length < 2 || p.title.length > 80) return ["title", "כותרת: 2 עד 80 תווים."];
+    if (p.push_title && (p.push_title.length < 2 || p.push_title.length > 60)) return ["push_title", "המשפט שתופס: 2 עד 60 תווים."];
+    if (p.push_body && p.push_body.length > 140) return ["push_body", "מה מחכה בפנים: עד 140 תווים."];
     if (p.kind === "event" && !p.event_at) return ["event_at", "לאירוע צריך תאריך ושעה."];
     if (p.code && /\s/.test(p.code)) return ["code", "קוד ההנחה בלי רווחים."];
     if (p.link_url && !/^https:\/\/\S+$/.test(p.link_url)) return ["link_url", "הקישור צריך להתחיל ב־https://"];
@@ -3851,29 +3941,39 @@
     var bad = offerProblem(p);
     if (bad) return offerError(bad[1], bad[0] === "event_at" ? "event-date" : bad[0]);
     var willPush = status === "published" && p.push_requested && !f.pushed_at;
+    if (willPush && cardMissing(f)) return offerError("לכרטיס צריך שורה גדולה.", "card_big");
+    var future = p.starts_at && new Date(p.starts_at).getTime() > Date.now();
     var ask = willPush
-      ? askYes({
-        title: "לפרסם ולשלוח התראה?",
-        text: (p.starts_at && new Date(p.starts_at).getTime() > Date.now()
-          ? "ההתראה תצא כשהתוקף יתחיל (" + stamp(p.starts_at) + ")"
-          : "ההתראה תצא עכשיו") + " למי שהפעיל ״הטבות ואירועים״" + (p.area_label ? " ונמצא עד " + p.radius_km + " ק״מ מ" + p.area_label : "") +
-          ", חוץ ממי שקיבל התראה כזו בשבוע האחרון. אי אפשר לבטל התראה שיצאה.",
-        ok: "פרסום ושליחה"
+      ? rpc("admin_offer_push_audience", { lat: p.lat, lon: p.lon, radius_km: p.radius_km }).then(function (res) {
+        var n = fmt((res && res.reach) || 0);
+        return askYes({
+          title: future ? "ההתראה תישלח כשהפרסום יתחיל, " + (Number(n) === 1 ? "לאדם אחד" : "ל־" + n + " רצים") + " לפי היום."
+            : "שולחים עכשיו " + (Number(n) === 1 ? "לאדם אחד" : "ל־" + n + " רצים") + "?",
+          node: notifPreview(f),
+          ok: "כן, לשלוח",
+          cancel: "עוד רגע"
+        });
       })
       : Promise.resolve(true);
     ask.then(function (yes) {
       if (!yes) return;
       var btns = document.querySelectorAll("#of-actions .btn");
       Array.prototype.forEach.call(btns, function (b) { b.disabled = true; });
-      rpc("admin_save_offer", { offer: p }).then(function (id) {
-        toast(status === "published" ? (willPush ? "פורסם, וההתראה בדרך" : "פורסם") : "נשמר כטיוטה");
+      // The card goes up first: without it nothing is published or sent.
+      (willPush ? makeCard(f) : Promise.resolve(null)).then(function (card) {
+        if (willPush) p.push_image_url = card;
+        return rpc("admin_save_offer", { offer: p });
+      }).then(function (id) {
+        toast(status === "published" ? (willPush ? (future ? "פורסם. ההתראה תצא כשהפרסום יתחיל" : "פורסם, וההתראה בדרך") : "פורסם") : "נשמר כטיוטה");
         offers.form.id = id;
+        rememberCard(f, id);
         return loadOffers().then(function () {
           var row = offers.rows.filter(function (r) { return r.id === id; })[0];
           if (row && state.tab === "offers") { offers.form = offerForm(row); drawOfferForm(); drawOfferList(); }
         });
       }).catch(function (e) {
         Array.prototype.forEach.call(btns, function (b) { b.disabled = false; });
+        if (cardError(e)) return offerError(cardError(e));
         if (missingRpc(e)) return offerError("השרת עוד לא עודכן לגרסה הזו (v56). מריצים את העדכון ב־Supabase.");
         var c = code(e);
         if (c === "invalid_argument" || /offer_not_found/.test(String(e && e.message))) {
@@ -3881,6 +3981,468 @@
         }
         fail(e);
       });
+    }).catch(function (e) {
+      // The number of runners could not be read, so nothing was asked and nothing was sent.
+      if (missingRpc(e)) return offerError("השרת עוד לא עודכן לגרסה הזו (v70). מריצים את העדכון ב־Supabase.");
+      fail(e);
+    });
+  }
+
+  // ------------------------------------------------------------------ the push card and preview (round 71, v70) ---
+  // The card is drawn on a 1024×512 canvas, the shapes of the canvas board's direction C (w = 320 there, so k = 3.2).
+  // The preview and the uploaded PNG come from the same drawing. The notches and corners are transparent, so the card
+  // sits on whatever colour the phone puts behind it. iOS clips the lock-screen thumbnail to the main area, so that's
+  // where the main text stays.
+
+  var CARD_W = 1024, CARD_H = 512, CARD_K = 3.2;
+  var CARD_INK = "#0E0E0E", CARD_VOLT = "#D4FF3F";
+  var cardFontsLoaded = null;
+
+  // Resolves true once Heebo is here (the Hebrew and Latin parts), false when it couldn't be loaded.
+  function cardFonts() {
+    if (cardFontsLoaded) return cardFontsLoaded;
+    if (!document.fonts || !document.fonts.load) return Promise.resolve(false);
+    var loads = ["900", "800", "700"].map(function (w) { return document.fonts.load(w + " 40px Heebo", "אב20%."); });
+    var result = Promise.all(loads).then(function (faces) {
+      var ok = faces.every(function (x) { return x && x.length > 0; });
+      if (!ok) cardFontsLoaded = null;
+      return ok;
+    }).catch(function () { cardFontsLoaded = null; return false; });
+    cardFontsLoaded = result;
+    return result;
+  }
+
+  // What the card can say from what was typed: a percent in the title, the event's date, a distance only if typed.
+  function cardPrefill(f) {
+    var title = f.title.trim();
+    if (f.kind === "offer") {
+      var percent = /(\d{1,3})\s*%/;
+      var m = title.match(percent);
+      var fallback = m ? null : (f.push_title || "").match(percent);
+      var rest = m
+        ? title.replace(percent, " ").replace(/(^|\s)הנחה(\s+של(?=\s|$))?(?=\s|$)/, " ").replace(/\s+/g, " ").replace(/^[\s·,:–-]+|[\s·,:–-]+$/g, "")
+        : "";
+      return { big: m ? m[1] + "%" : fallback ? fallback[1] + "%" : "", small: rest };
+    }
+    if (f.kind === "event") {
+      var parts = (f.event_date || "").split("-");
+      var far = (title + " " + f.body).match(/(\d+(?:[.,]\d+)?)\s*ק["״'׳]?מ/);
+      return {
+        big: parts.length === 3 ? Number(parts[2]) + "." + Number(parts[1]) : "",
+        small: [far ? far[1] + " ק״מ" : null, f.city || f.address.trim() || null].filter(Boolean).join(" · ")
+      };
+    }
+    return { big: "", small: "" };
+  }
+
+  function cardSpec(f) {
+    var pre = cardPrefill(f);
+    return {
+      kind: f.kind,
+      big: (f.card_big_touched ? f.card_big : pre.big).trim(),
+      small: (f.card_small_touched ? f.card_small : pre.small).trim(),
+      band: f.title.trim() || f.business_name.trim(),
+      // Hooks must be true: without a code the stub doesn't promise one.
+      stub: f.code.trim() ? ["הקוד", "בפנים"] : ["הפרטים", "בפנים"]
+    };
+  }
+  function cardSig(f) { return JSON.stringify(cardSpec(f)); }
+  function cardMissing(f) { return f.kind !== "update" && !cardSpec(f).big; }
+
+  function cardFont(weight, px) { return weight + " " + px + 'px Heebo, "Arial Hebrew", sans-serif'; }
+  function cardRound(ctx, x, y, w, hgt, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + hgt, r);
+    ctx.arcTo(x + w, y + hgt, x, y + hgt, r);
+    ctx.arcTo(x, y + hgt, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  // One centred line; a long one shrinks to fit, then gets an ellipsis.
+  function cardText(ctx, text, cx, y, weight, px, maxW, color) {
+    if (!text) return;
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.direction = /[\u0590-\u05FF]/.test(text) ? "rtl" : "ltr";
+    var size = px;
+    ctx.font = cardFont(weight, size);
+    while (ctx.measureText(text).width > maxW && size > px * 0.5) {
+      size -= 2;
+      ctx.font = cardFont(weight, size);
+    }
+    var shown = text;
+    while (ctx.measureText(shown).width > maxW && shown.length > 1) {
+      shown = shown.slice(0, -2) + "…";
+    }
+    ctx.fillText(shown, cx, y);
+  }
+  function cardCircle(ctx, x, y, r) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.closePath();
+  }
+
+  // The ticket (gen.py ticket()): the main text on the left two thirds, a dashed tear line, the stub with the logo.
+  function drawTicket(ctx, c) {
+    var k = CARD_K, W = CARD_W, H = CARD_H;
+    cardRound(ctx, 0, 0, W, H, 14 * k);
+    ctx.fillStyle = CARD_INK;
+    ctx.fill();
+    // The notches, cut out.
+    ctx.globalCompositeOperation = "destination-out";
+    cardCircle(ctx, W * 0.68 + 9 * k, 0, 9 * k);
+    ctx.fill();
+    cardCircle(ctx, W * 0.68 + 9 * k, H, 9 * k);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+    // The tear line.
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth = 1.5 * k;
+    ctx.setLineDash([3 * k, 3 * k]);
+    ctx.beginPath();
+    ctx.moveTo(W * 0.68 + 8.75 * k, 14 * k);
+    ctx.lineTo(W * 0.68 + 8.75 * k, H - 14 * k);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // The main area.
+    var cx = W * 0.33, maxW = W * 0.66 - 24 * k;
+    var smallH = c.small ? 14 * k * 1.47 + 4 * k : 0;
+    var top = (H - 62 * k - smallH) / 2;
+    cardText(ctx, c.big, cx, top + 31 * k, "900", 62 * k, maxW, CARD_VOLT);
+    if (c.small) cardText(ctx, c.small, cx, top + 62 * k + 4 * k + 7 * 1.47 * k, "800", 14 * k, maxW, "#FFFFFF");
+    // The stub: the logo and two short lines.
+    var sx = W * 0.85, s = Math.floor(18 * k), line = 12 * k * 1.25;
+    var y0 = (H - s - 8 * k - line * 2) / 2;
+    var right = sx + s * 0.8;
+    ctx.fillStyle = CARD_VOLT;
+    cardCircle(ctx, right - s / 2, y0 + s / 2, s / 2);
+    ctx.fill();
+    var ring = Math.max(2, Math.floor(s / 7));
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = ring;
+    cardCircle(ctx, right - s * 0.55 - s / 2, y0 + s / 2, s / 2 - ring / 2);
+    ctx.stroke();
+    var ty = y0 + s + 8 * k + line / 2;
+    cardText(ctx, c.stub[0], sx, ty, "700", 12 * k, W * 0.28, "#FFFFFF");
+    cardText(ctx, c.stub[1], sx, ty + line, "700", 12 * k, W * 0.28, "#FFFFFF");
+  }
+
+  // The bib (gen.py bib()): a white sheet on ink, a volt band, the big date, a small line, four pin holes.
+  function drawBib(ctx, c) {
+    var k = CARD_K, W = CARD_W, H = CARD_H;
+    cardRound(ctx, 0, 0, W, H, 14 * k);
+    ctx.fillStyle = CARD_INK;
+    ctx.fill();
+    var x = 14 * k, y = 9 * k, w = W - 28 * k, hgt = H - 18 * k;
+    ctx.save();
+    cardRound(ctx, x, y, w, hgt, 8 * k);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fill();
+    ctx.clip();
+    ctx.fillStyle = CARD_VOLT;
+    ctx.fillRect(x, y, w, 28 * k);
+    ctx.restore();
+    var cx = W / 2, maxW = w - 40 * k;
+    cardText(ctx, c.band, cx, y + 14 * k, "900", 14 * k, maxW, CARD_INK);
+    cardText(ctx, c.big, cx, y + 28 * k + 33 * k, "900", 56 * k, maxW, CARD_INK);
+    cardText(ctx, c.small, cx, y + 28 * k + 66 * k + 6.5 * k, "800", 13 * k, maxW, CARD_INK);
+    ctx.fillStyle = CARD_INK;
+    var hole = 4.5 * k;
+    [[x + 7 * k + hole, y + 6 * k + hole], [x + w - 7 * k - hole, y + 6 * k + hole],
+      [x + 7 * k + hole, y + hgt - 6 * k - hole], [x + w - 7 * k - hole, y + hgt - 6 * k - hole]].forEach(function (p) {
+      cardCircle(ctx, p[0], p[1], hole);
+      ctx.fill();
+    });
+  }
+
+  function drawCard(canvas, c) {
+    canvas.width = CARD_W;
+    canvas.height = CARD_H;
+    var ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, CARD_W, CARD_H);
+    if (c.kind === "event") drawBib(ctx, c);
+    else drawTicket(ctx, c);
+  }
+
+  // The object's path: the one this offer's card already has, else a new one. A redraw overwrites it, so there's one
+  // picture per offer, and the URL's ?v= makes phones fetch the new one.
+  function cardPath(f) {
+    if (f.card_path) return f.card_path;
+    var m = /\/offer-images\/([^?]+\.png)(\?|$)/.exec(f.push_image_url || "");
+    if (m) return (f.card_path = m[1]);
+    var rand = window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID()
+      : String(Date.now()) + "-" + Math.floor(Math.random() * 1e9);
+    return (f.card_path = new Date().toISOString().slice(0, 7) + "/" + rand + ".png");
+  }
+
+  // Resolves to the card's URL (null for an update, which has none). Redrawn and uploaded only when its inputs changed.
+  function makeCard(f) {
+    if (f.kind === "update") return Promise.resolve(null);
+    var sig = cardSig(f);
+    if (f.push_image_url && f.card_saved_sig === sig) return Promise.resolve(f.push_image_url);
+    var path = cardPath(f);
+    return cardFonts().then(function (ok) {
+      if (!ok) throw cardFailure("font");
+      return new Promise(function (resolve, reject) {
+        var canvas = document.createElement("canvas");
+        drawCard(canvas, cardSpec(f));
+        canvas.toBlob(function (blob) { return blob ? resolve(blob) : reject(cardFailure("encode")); }, "image/png");
+      });
+    }).then(function (blob) {
+      return sb.storage.from("offer-images").upload(path, blob, { contentType: "image/png", cacheControl: "31536000", upsert: true });
+    }).then(function (res) {
+      if (res && res.error) throw cardFailure(/row-level security|unauthorized|403/i.test(String(res.error.message || "")) ? "denied" : "upload");
+      var pub = sb.storage.from("offer-images").getPublicUrl(path);
+      var url = pub && pub.data && pub.data.publicUrl;
+      if (!url) throw cardFailure("upload");
+      f.push_image_url = url + "?v=" + Date.now();
+      f.card_saved_sig = sig;
+      return f.push_image_url;
+    }).catch(function (e) {
+      throw e && e.card ? e : cardFailure("upload");
+    });
+  }
+  function cardFailure(why) {
+    var e = new Error("card");
+    e.card = why;
+    return e;
+  }
+  // A failed card's sentence, or null for any other error.
+  function cardError(e) {
+    switch (e && e.card) {
+      case "font": return "הגופן של הכרטיס לא נטען, אז ההתראה לא נשלחה. אפשר לנסות שוב.";
+      case "denied": return "אין הרשאה להעלות את הכרטיס, אז ההתראה לא נשלחה. צריך כניסה עם קוד מאפליקציית האימות.";
+      case "encode": case "upload": return "הכרטיס לא עלה, אז ההתראה לא נשלחה. אפשר לנסות שוב.";
+      default: return null;
+    }
+  }
+  function rememberCard(f, id) {
+    offers.cards[id] = { big: f.card_big, small: f.card_small, bigTouched: f.card_big_touched, smallTouched: f.card_small_touched,
+      sig: f.push_image_url && f.card_saved_sig === cardSig(f) ? f.card_saved_sig : null };
+  }
+
+  // A notification as the phone shows it: the words, and the card under them. offers.ui stays out of it, so the confirm
+  // dialog uses it too. An offer's stored title and body rules are the server's: coalesce(push_title, title), and
+  // offer_push_body for the body.
+  function notifPreview(f) {
+    var title = f.push_title.trim() || f.title.trim() || "המשפט שתופס";
+    var body = f.push_body.trim() || [f.business_name.trim(), f.city].filter(Boolean).join(" · ") || "פרטים באפליקציה";
+    var picture = null;
+    if (f.kind !== "update") {
+      if (f.card_show_saved && f.card_saved_sig === cardSig(f)) {
+        picture = h("img", { class: "of-notif-card", src: f.push_image_url, alt: "הכרטיס של ההתראה", referrerpolicy: "no-referrer" });
+      } else {
+        picture = h("canvas", { class: "of-notif-card", role: "img", "aria-label": "הכרטיס של ההתראה" });
+        drawCard(picture, cardSpec(f));
+      }
+    }
+    return h("div", { class: "of-notif" },
+      h("div", { class: "of-notif-msg" },
+        h("span", { class: "of-notif-icon", "aria-hidden": "true" }),
+        h("span", { class: "of-notif-text" },
+          h("span", { class: "of-notif-top" },
+            h("b", { text: title }),
+            h("span", { class: "of-notif-now", text: "עכשיו" })),
+          h("span", { text: body }))),
+      picture);
+  }
+
+  function drawPushPreview() {
+    var box = $("of-push-preview");
+    if (!box) return;
+    var f = offers.form;
+    // Lines not typed by hand follow the title, the date and the place.
+    var pre = cardPrefill(f);
+    [["card_big", pre.big, "card_big_touched"], ["card_small", pre.small, "card_small_touched"]].forEach(function (x) {
+      if (f[x[2]]) return;
+      f[x[0]] = x[1];
+      var input = $("of-" + x[0]);
+      if (input && input.value !== x[1]) input.value = x[1];
+    });
+    var note = $("of-push-count");
+    if (note) {
+      var n = f.push_title.trim().length;
+      note.textContent = n + "/60" + (n > 30 ? " · ארוך, ייחתך בנעילה" : "");
+    }
+    fill(box, h("span", { class: "ov-label", text: "כך זה ייראה" }), notifPreview(f));
+  }
+
+  // "התראה קודמת נשלחה לפני יומיים." when another offer was pushed under 3 days ago. Real, from admin_offers.
+  function drawPushWarning() {
+    var el = $("of-push-warn");
+    if (!el) return;
+    var f = offers.form;
+    var last = 0;
+    offers.rows.forEach(function (r) {
+      if (r.id === f.id || !r.pushed_at) return;
+      var at = new Date(r.pushed_at).getTime();
+      if (at > last) last = at;
+    });
+    if (f.pushed_at || !f.push_requested || !last || Date.now() - last >= 3 * DAY) {
+      el.hidden = true;
+      return;
+    }
+    var days = Math.round((new Date(dayKey(new Date())).getTime() - new Date(dayKey(new Date(last))).getTime()) / DAY);
+    el.textContent = "התראה קודמת נשלחה " + (days <= 0 ? "היום" : days === 1 ? "אתמול" : days === 2 ? "לפני יומיים" : "לפני " + days + " ימים") + ".";
+    el.hidden = false;
+  }
+
+  // ------------------------------------------------------------------ test send (round 71, v70) ---
+  // Saved testers, ticked per send. admin_test_offer_push queues the offer's real push for those people only.
+
+  function testSection() {
+    var input = h("input", { type: "search", id: "of-tester-q", autocomplete: "off", placeholder: "שם או אימייל" });
+    var found = h("div", { class: "of-tester-found", id: "of-tester-found" });
+    var timer = null;
+    var token = 0;
+    input.addEventListener("input", function () {
+      clearTimeout(timer);
+      var q = input.value.trim();
+      var mine = ++token;
+      if (q.length < 2) { found.textContent = ""; return; }
+      timer = setTimeout(function () {
+        rpc("admin_search", { q: q }).then(function (res) {
+          if (mine !== token) return;
+          var users = (res && res.users) || [];
+          if (!users.length) return fill(found, h("span", { class: "note", text: "לא נמצא משתמש או משתמשת בשם הזה." }));
+          fill(found, users.map(function (u) {
+            return h("button", { type: "button", class: "of-tester-add", onclick: function () {
+              input.value = "";
+              found.textContent = "";
+              addTester(u.id);
+            } },
+              h("span", { class: "of-tester-who" }, h("b", { text: (u.name || "").trim() || "ללא שם" }),
+                h("span", { class: "note", dir: "ltr", text: u.email || "" })),
+              h("span", { class: "of-tester-plus", text: "הוספה" }));
+          }));
+        }).catch(function (e) {
+          if (mine === token) fill(found, h("span", { class: "note", text: "החיפוש נכשל. אפשר לנסות שוב." }));
+          if (!missingRpc(e) && code(e) !== "other") fail(e);
+        });
+      }, 300);
+    });
+    return h("section", { class: "of-test", "aria-label": "שליחת בדיקה" },
+      h("h3", { class: "of-test-title", text: "שליחת בדיקה" }),
+      h("div", { id: "of-testers" }),
+      h("label", { class: "field" }, h("span", { class: "label", text: "הוספת בודק" }), input),
+      found,
+      h("p", { class: "note", text: "רק האנשים שסימנת יקבלו. אפשר לשלוח שוב, גם מטיוטה. השליחה לכולם נשארת נפרדת." }),
+      h("div", { id: "of-test-btn" }));
+  }
+
+  function loadTesters() {
+    return rpc("admin_offer_testers").then(function (rows) {
+      offers.testers = rows || [];
+      offers.testersError = null;
+      drawTesters();
+    }).catch(function (e) {
+      offers.testers = [];
+      offers.testersError = missingRpc(e) ? "שליחת בדיקה תעבוד אחרי שעדכון v70 יורץ ב־Supabase." : "לא הצלחנו לטעון את הבודקים.";
+      drawTesters();
+      if (!missingRpc(e) && code(e) !== "other") fail(e);
+    });
+  }
+
+  function addTester(id) {
+    rpc("admin_set_offer_tester", { target: id, is_tester: true }).then(function () {
+      offers.picked[id] = true;
+      return loadTesters();
+    }).catch(fail);
+  }
+  function removeTester(id) {
+    rpc("admin_set_offer_tester", { target: id, is_tester: false }).then(function () {
+      delete offers.picked[id];
+      delete offers.results[id];
+      return loadTesters();
+    }).catch(fail);
+  }
+
+  function pickedTesters() {
+    return (offers.testers || []).filter(function (t) { return offers.picked[t.user_id]; }).map(function (t) { return t.user_id; });
+  }
+
+  function drawTesters() {
+    var box = $("of-testers");
+    if (!box) return;
+    if (offers.testers === null) {
+      fill(box, h("p", { class: "note", text: "טוענים בודקים…" }));
+    } else if (offers.testersError) {
+      fill(box, h("p", { class: "note", text: offers.testersError }));
+    } else if (!offers.testers.length) {
+      fill(box, h("p", { class: "note", text: "עוד אין בודקים. אפשר להוסיף גם את עצמך." }));
+    } else {
+      fill(box, h("div", { class: "of-testers" }, offers.testers.map(function (t) {
+        var cb = h("input", { type: "checkbox", "aria-label": t.name || "ללא שם" });
+        cb.checked = !!offers.picked[t.user_id];
+        cb.addEventListener("change", function () {
+          if (cb.checked) offers.picked[t.user_id] = true;
+          else delete offers.picked[t.user_id];
+          drawTestButton();
+        });
+        var res = offers.results[t.user_id];
+        return h("div", { class: "of-tester" },
+          h("label", { class: "of-check of-tester-pick" }, cb,
+            h("span", null, h("b", { text: (t.name || "").trim() || "ללא שם" }),
+              h("span", { class: "note", text: t.devices ? "יש מכשיר" : "אין מכשיר" }))),
+          res ? h("span", { class: "chip" + (res.queued ? " ok" : ""), text: res.queued ? "נשלח" : "אין מכשיר" }) : null,
+          h("button", { type: "button", class: "btn text small", onclick: function () { removeTester(t.user_id); } }, "הסרה"));
+      })));
+    }
+    drawTestButton();
+  }
+
+  function drawTestButton() {
+    var box = $("of-test-btn");
+    if (!box) return;
+    var n = pickedTesters().length;
+    fill(box, h("button", { type: "button", class: "btn outline", id: "of-test-send", disabled: !n || offers.busy || null,
+      onclick: sendTest }, offers.busy ? "שולחים…" : (n === 1 ? "שליחת בדיקה לאדם אחד" : "שליחת בדיקה ל־" + fmt(n))));
+  }
+
+  // Saves the offer (a draft if new), makes the card, and queues the test. The real push isn't touched: an offer already
+  // published keeps the switch it was saved with, so this save can't start it.
+  function sendTest() {
+    if (offers.uploading) return offerError("עוד מעלים את התמונה. רגע.");
+    var f = offers.form;
+    var people = pickedTesters();
+    if (!people.length || offers.busy) return;
+    if (people.length > 20) return offerError("אפשר לשלוח בדיקה לעד 20 אנשים.");
+    var status = f.id && f.status === "published" ? "published" : "draft";
+    var p = offerPayload(status);
+    if (status === "published") p.push_requested = !!f.saved_push;
+    var bad = offerProblem(p);
+    if (bad) return offerError(bad[1], bad[0] === "event_at" ? "event-date" : bad[0]);
+    if (cardMissing(f)) return offerError("לכרטיס צריך שורה גדולה.", "card_big");
+    offers.busy = true;
+    offers.results = {};
+    drawTesters();
+    makeCard(f).then(function (card) {
+      p.push_image_url = card;
+      return rpc("admin_save_offer", { offer: p });
+    }).then(function (id) {
+      f.id = id;
+      f.dirty = false;
+      rememberCard(f, id);
+      return rpc("admin_test_offer_push", { offer: id, targets: people });
+    }).then(function (rows) {
+      (rows || []).forEach(function (r) { offers.results[r.user_id] = r; });
+      toast("הבדיקה בדרך");
+    }).catch(function (e) {
+      if (cardError(e)) return offerError(cardError(e));
+      if (missingRpc(e)) return offerError("השרת עוד לא עודכן לגרסה הזו (v70). מריצים את העדכון ב־Supabase.");
+      if (code(e) === "invalid_argument" || /offer_not_found/.test(String(e && e.message))) return offerError(offerDetail(e) || errorText(e));
+      fail(e);
+    }).then(function () {
+      offers.busy = false;
+      if (offers.form !== f) return;
+      drawTesters();
+      if (f.id) {
+        loadOffers().then(function () {
+          if (offers.form === f && state.tab === "offers") { drawOfferForm(); drawOfferList(); }
+        });
+      }
     });
   }
 
@@ -3945,8 +4507,14 @@
       var dlg = $("ask");
       $("ask-title").textContent = o.title;
       $("ask-text").textContent = o.text || "";
+      $("ask-text").hidden = !o.text;
+      var extra = $("ask-extra");
+      extra.textContent = "";
+      if (o.node) extra.appendChild(o.node);
+      extra.hidden = !o.node;
       $("ask-ok").textContent = o.ok;
       $("ask-ok").className = "btn " + (o.danger ? "danger" : "ink");
+      $("ask-cancel").textContent = o.cancel || "ביטול";
       var done = function (v) {
         $("ask-form").onsubmit = null;
         $("ask-cancel").onclick = null;
@@ -3960,6 +4528,396 @@
       if (typeof dlg.showModal === "function") dlg.showModal();
       else dlg.setAttribute("open", "");
       $("ask-ok").focus();
+    });
+  }
+
+  // ------------------------------------------------------------------ the coach board (round 72, v71) ---
+  // admin_coaches / admin_save_coach / admin_set_coach_status / admin_delete_coach. A list of cards, and a form in its
+  // place. Photos go to the offer-images bucket under coaches/, through the offers' downscale. The message in the preview
+  // is the same wording as private.coach_message, and the phone the same rule as private.coach_phone: change them together.
+
+  // admin_save_coach's details (English, from the server) in Hebrew.
+  var COACH_DETAILS = [
+    [/^first_name/, "שם פרטי: עד 30 תווים."],
+    [/^last_name/, "שם משפחה: עד 30 תווים."],
+    [/^tagline is required/, "לפרסום צריך שורה קטנה בלוח."],
+    [/^tagline/, "השורה הקטנה: 2 עד 50 תווים."],
+    [/^city/, "העיר: עד 40 תווים."],
+    [/^about is required/, "לפרסום צריך כמה מילים על המאמן."],
+    [/^about/, "הטקסט על המאמן: עד 600 תווים."],
+    [/^benefit/, "ההטבה: 2 עד 60 תווים."],
+    [/^whatsapp_phone is required/, "לפרסום צריך מספר וואטסאפ."],
+    [/^whatsapp_phone/, "מספר הוואטסאפ לא תקין."],
+    [/^image_url is required/, "לפרסום צריך תמונה."],
+    [/^image_url/, "התמונה צריכה לעלות מכאן (offer-images)."],
+    [/^ends_at/, "התאריך לא תקין."],
+    [/^status/, "אפשר לשמור רק כטיוטה או לפרסם."]
+  ];
+
+  var coaches = { rows: [], token: 0, form: null, uploading: false };
+
+  // One line, the way the server keeps it.
+  function coachLine(v) { return String(v === null || v === undefined ? "" : v).replace(/\s+/g, " ").trim(); }
+  function coachFullName(c) { return (c.first_name + " " + c.last_name).trim(); }
+
+  // private.coach_message.
+  function coachMessage(firstName, benefit) {
+    var line = coachLine(benefit).replace(/[.\s]+$/, "");
+    return "היי " + coachLine(firstName) + ", הגעתי דרך ״בוא נרוץ״ ואשמח לשמוע על האימונים."
+      + (line ? " ראיתי שיש הטבה לרצי האפליקציה: " + line + "." : "");
+  }
+  // private.coach_phone: digits only, a leading 00 dropped, a leading 0 becomes 972. "" with no digits.
+  function coachPhone(raw) {
+    var d = String(raw || "").replace(/[^0-9]/g, "");
+    if (d.slice(0, 2) === "00") return d.slice(2);
+    if (d.charAt(0) === "0") return "972" + d.slice(1);
+    return d;
+  }
+  function coachPhoneOk(d) { return /^[1-9][0-9]{9,14}$/.test(d); }
+  // Everything outside unreserved characters is encoded, so + & = ? # survive.
+  function coachWaLink(phone, message) {
+    return "https://wa.me/" + phone + "?text=" + encodeURIComponent(message).replace(/[!'()*]/g, function (c) {
+      return "%" + c.charCodeAt(0).toString(16).toUpperCase();
+    });
+  }
+
+  // Minutes Asia/Jerusalem is ahead of UTC at a moment.
+  function jerusalemOffset(ms) {
+    var parts = {};
+    new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jerusalem", hourCycle: "h23", year: "numeric", month: "numeric",
+      day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }).formatToParts(new Date(ms)).forEach(function (p) {
+      parts[p.type] = Number(p.value);
+    });
+    return (Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second) - Math.floor(ms / 1000) * 1000) / MIN;
+  }
+  // "2026-12-31" → the end of that day in Asia/Jerusalem, as ISO, whatever this browser's time zone. "" → null.
+  function coachEndIso(date) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || "");
+    if (!m) return null;
+    var wall = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59);
+    // The offset at the guess can differ from the one at the answer on the two days the clocks change.
+    var at = wall - jerusalemOffset(wall) * MIN;
+    return new Date(wall - jerusalemOffset(at) * MIN).toISOString();
+  }
+  // Back: the day in Asia/Jerusalem, for the date input.
+  function coachEndDate(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    return isNaN(d.getTime()) ? "" : dayKey(d);
+  }
+  function coachStatusLine(c) {
+    if (c.state === "draft") return "טיוטה";
+    if (c.state === "ended") return "הסתיים";
+    if (c.state === "archived") return "בארכיון";
+    return c.ends_at ? "פעיל עד " + dM(c.ends_at) : "פעיל";
+  }
+
+  // A new form's state, or one filled from an admin_coaches row.
+  function coachForm(c) {
+    return {
+      id: c ? c.id : null, first_name: c ? c.first_name : "", last_name: c ? c.last_name : "", tagline: (c && c.tagline) || "",
+      city: (c && c.city) || "", about: (c && c.about) || "", whatsapp_phone: (c && c.whatsapp_phone) || "",
+      benefit: (c && c.benefit) || "", image_url: (c && c.image_url) || "", ends: c ? coachEndDate(c.ends_at) : "",
+      status: c ? c.status : "draft", state: c ? c.state : null, line: c ? coachStatusLine(c) : null, dirty: false
+    };
+  }
+
+  function coachPayload(f, status) {
+    var p = {
+      first_name: coachLine(f.first_name),
+      last_name: coachLine(f.last_name),
+      tagline: coachLine(f.tagline) || null,
+      city: coachLine(f.city) || null,
+      about: f.about.trim() || null,
+      benefit: coachLine(f.benefit) || null,
+      whatsapp_phone: coachPhone(f.whatsapp_phone) || null,
+      image_url: f.image_url || null,
+      ends_at: coachEndIso(f.ends),
+      status: status
+    };
+    if (f.id) p.id = f.id;
+    return p;
+  }
+
+  // What the form says before it goes to the server (the server checks it all again): [field, message], or null.
+  function coachProblem(p, now) {
+    if (!p.first_name || p.first_name.length > 30) return ["first_name", "צריך שם פרטי, עד 30 תווים."];
+    if (!p.last_name || p.last_name.length > 30) return ["last_name", "צריך שם משפחה, עד 30 תווים."];
+    if (p.tagline && (p.tagline.length < 2 || p.tagline.length > 50)) return ["tagline", "השורה הקטנה: 2 עד 50 תווים."];
+    if (p.city && p.city.length > 40) return ["city", "העיר: עד 40 תווים."];
+    if (p.about && p.about.length > 600) return ["about", "הטקסט על המאמן: עד 600 תווים."];
+    if (p.whatsapp_phone && !coachPhoneOk(p.whatsapp_phone)) return ["whatsapp_phone", "מספר הוואטסאפ לא תקין."];
+    if (p.benefit && (p.benefit.length < 2 || p.benefit.length > 60)) return ["benefit", "ההטבה: 2 עד 60 תווים."];
+    if (p.status === "published") {
+      if (!p.image_url) return ["file", "לפרסום צריך תמונה."];
+      if (!p.tagline) return ["tagline", "לפרסום צריך שורה קטנה בלוח."];
+      if (!p.about) return ["about", "לפרסום צריך כמה מילים על המאמן."];
+      if (!p.whatsapp_phone) return ["whatsapp_phone", "לפרסום צריך מספר וואטסאפ."];
+      if (p.ends_at && new Date(p.ends_at).getTime() <= now) return ["ends", "התאריך של סוף ההסכם כבר עבר."];
+    }
+    return null;
+  }
+
+  function renderCoaches() {
+    if (coaches.form) return drawCoachForm();
+    show(pageHead("מאמנים", null, h("button", { type: "button", class: "btn ink", onclick: function () { openCoach(null); } }, "מאמן חדש")),
+      h("div", { class: "co-list", id: "coach-list" }, skeleton("טוענים מאמנים…")));
+    return loadCoaches();
+  }
+
+  function loadCoaches() {
+    var token = ++coaches.token;
+    return rpc("admin_coaches").then(function (rows) {
+      if (token !== coaches.token || state.tab !== "coaches" || !$("coach-list")) return;
+      coaches.rows = rows || [];
+      drawCoachList();
+    }).catch(function (e) {
+      if (token !== coaches.token || !$("coach-list")) return;
+      fill($("coach-list"), missingRpc(e)
+        ? empty("השרת עוד לא עודכן", "המאמנים יופיעו אחרי שעדכון v71 יורץ ב־Supabase.")
+        : retryBox("לא הצלחנו לטעון את המאמנים.", loadCoaches));
+      if (!missingRpc(e)) fail(e);
+    });
+  }
+
+  function drawCoachList() {
+    var box = $("coach-list");
+    if (!coaches.rows.length) {
+      return fill(box, emptyNote("מאמן שתוסיפו יופיע כאן, עם כמה רצים פתחו את הדף ולחצו על וואטסאפ.",
+        "M12 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5", "עוד אין מאמנים"));
+    }
+    fill(box, coaches.rows.map(coachCard));
+  }
+
+  function coachCard(c) {
+    return h("article", { class: "card co-card" },
+      h("div", { class: "co-card-top" },
+        avatar({ avatar_url: c.image_url, name: c.first_name, id: c.id }, true),
+        h("div", { class: "co-card-who" },
+          h("b", { class: "who-name", text: coachFullName(c) }),
+          h("span", { class: "row-sub", text: coachStatusLine(c) })),
+        h("button", { type: "button", class: "btn quiet", "aria-label": "עריכה: " + coachFullName(c),
+          onclick: function () { openCoach(c); } }, "עריכה")),
+      h("div", { class: "co-counts" },
+        offerCount("פתחו את הדף", c.open_count),
+        offerCount("לחצו על וואטסאפ", c.whatsapp_count)));
+  }
+
+  function openCoach(c) {
+    coaches.form = coachForm(c);
+    drawCoachForm();
+    view().focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+  }
+
+  // Back to the list; unsaved changes are asked about first.
+  function leaveCoachForm(then) {
+    var go = function () {
+      coaches.form = null;
+      if (then) then();
+      renderCoaches();
+      window.scrollTo(0, 0);
+    };
+    if (coaches.uploading) return toast("עוד מעלים את התמונה. רגע.");
+    if (!coaches.form || !coaches.form.dirty) return go();
+    askYes({ title: "לעזוב בלי לשמור?", text: "השינויים בטופס לא נשמרו.", ok: "לעזוב" }).then(function (yes) { if (yes) go(); });
+  }
+
+  // The form. Inputs write coaches.form; a change redraws only the message.
+  function drawCoachForm() {
+    var f = coaches.form;
+    var err = h("p", { class: "form-error", id: "coach-error", role: "alert", hidden: true });
+    var text = function (key, label, o) {
+      o = o || {};
+      var input = h(o.area ? "textarea" : "input", { id: "co-" + key, maxlength: o.max, dir: o.ltr ? "ltr" : null,
+        rows: o.area ? 5 : null, type: o.area ? null : (o.type || "text"), inputmode: o.inputmode || null, autocomplete: "off" });
+      input.value = f[key] || "";
+      input.addEventListener("input", function () {
+        f[key] = input.value;
+        f.dirty = true;
+        err.hidden = true;
+        drawCoachMessage();
+      });
+      return h("label", { class: "field" }, h("span", { class: "label", text: label }), input);
+    };
+    var ends = h("input", { type: "date", id: "co-ends" });
+    ends.value = f.ends;
+    ends.addEventListener("input", function () { f.ends = ends.value; f.dirty = true; err.hidden = true; });
+
+    show(h("button", { type: "button", class: "btn text link", onclick: function () { leaveCoachForm(); } }, "› כל המאמנים"),
+      h("form", { class: "card of-form", novalidate: true, onsubmit: function (ev) { ev.preventDefault(); saveCoach("published"); } },
+        h("div", { class: "of-form-head" },
+          h("h1", { class: "settings-title", text: f.id ? "עריכת מאמן" : "מאמן חדש" }),
+          f.line ? h("span", { class: "chip status", text: f.line }) : null),
+        h("div", { class: "of-image", id: "co-image" }),
+        h("div", { class: "of-pair" },
+          text("first_name", "שם פרטי", { max: 30 }),
+          text("last_name", "שם משפחה", { max: 30 })),
+        text("tagline", "שורה קטנה בלוח", { max: 50 }),
+        text("city", "עיר", { max: 40 }),
+        text("about", "קצת על המאמן", { area: true, max: 600 }),
+        text("whatsapp_phone", "מספר וואטסאפ", { ltr: true, type: "tel", inputmode: "tel", max: 24 }),
+        text("benefit", "ההטבה (לא חובה)", { max: 60 }),
+        h("div", { class: "field" },
+          h("span", { class: "label", text: "ההודעה שתיפתח (נכתבת לבד)" }),
+          h("p", { class: "co-message", id: "co-message", "aria-live": "polite" }),
+          h("div", { id: "co-test" })),
+        h("label", { class: "field co-date" }, h("span", { class: "label", text: "מופיע עד (סוף ההסכם)" }), ends,
+          h("span", { class: "note", text: "ריק = בלי תאריך סיום" })),
+        err,
+        h("div", { class: "actions of-actions", id: "co-actions" },
+          h("button", { type: "submit", class: "btn ink" }, "פרסום"),
+          h("button", { type: "button", class: "btn quiet", onclick: function () { saveCoach("draft"); } }, "שמירת טיוטה"),
+          f.id && f.status !== "archived"
+            ? h("button", { type: "button", class: "btn text", onclick: function () { archiveCoach(f); } }, "העברה לארכיון") : null,
+          f.id ? h("button", { type: "button", class: "btn text danger", onclick: function () { deleteCoach(f); } }, "מחיקה") : null)));
+    drawCoachImage();
+    drawCoachMessage();
+  }
+
+  function drawCoachImage() {
+    var box = $("co-image");
+    if (!box) return;
+    var f = coaches.form;
+    var input = h("input", { type: "file", accept: "image/jpeg,image/png,image/webp", class: "sr-only", id: "co-file" });
+    input.addEventListener("change", function () {
+      var file = input.files && input.files[0];
+      input.value = "";
+      if (file) uploadCoachImage(file);
+    });
+    fill(box,
+      h("label", { class: "of-thumb co-thumb" + (f.image_url ? " has" : ""), for: "co-file" },
+        coaches.uploading ? h("span", { text: "מעלים…" })
+          : f.image_url ? h("img", { src: f.image_url, alt: "התמונה של המאמן", referrerpolicy: "no-referrer" })
+          : h("span", { text: "תמונה" })),
+      input,
+      h("span", { class: "of-image-text" },
+        h("span", { class: "note", text: "תמונה ריבועית נראית הכי טוב" }),
+        h("span", { class: "of-image-btns" },
+          h("label", { class: "btn quiet", for: "co-file" }, "העלאת תמונה"))));
+  }
+
+  function uploadCoachImage(file) {
+    var f = coaches.form;
+    coaches.uploading = true;
+    drawCoachImage();
+    var rand = window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID()
+      : String(Date.now()) + "-" + Math.floor(Math.random() * 1e9);
+    var path = "coaches/" + new Date().toISOString().slice(0, 7) + "/" + rand + ".jpg";
+    downscaleImage(file).then(function (blob) {
+      return sb.storage.from("offer-images").upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000", upsert: false });
+    }).then(function (res) {
+      if (res && res.error) throw res.error;
+      var pub = sb.storage.from("offer-images").getPublicUrl(path);
+      f.image_url = pub && pub.data && pub.data.publicUrl ? pub.data.publicUrl : "";
+      f.dirty = true;
+    }).catch(function (e) {
+      var m = String((e && e.message) || "");
+      if (m === "type") toast("אפשר להעלות JPEG, PNG או WebP.");
+      else if (m === "size") toast("התמונה גדולה מדי גם אחרי הקטנה. אפשר לנסות תמונה אחרת.");
+      else if (m === "decode" || m === "read") toast("לא הצלחנו לקרוא את התמונה.");
+      else if (/row-level security|unauthorized|403/i.test(m)) toast("אין הרשאה להעלות. צריך כניסה עם קוד מאפליקציית האימות.");
+      else toast("ההעלאה נכשלה. אפשר לנסות שוב.");
+    }).then(function () {
+      coaches.uploading = false;
+      if (coaches.form === f) drawCoachImage();
+    });
+  }
+
+  // The live preview, and the test link once there is a name and a valid number.
+  function drawCoachMessage() {
+    var box = $("co-message");
+    if (!box) return;
+    var f = coaches.form;
+    var name = coachLine(f.first_name);
+    var phone = coachPhone(f.whatsapp_phone);
+    box.textContent = coachMessage(name || "[שם פרטי]", f.benefit);
+    fill($("co-test"), name && coachPhoneOk(phone)
+      ? h("a", { class: "btn text link co-test", href: coachWaLink(phone, coachMessage(name, f.benefit)), target: "_blank",
+          rel: "noopener noreferrer" }, "בדיקה: לפתוח בוואטסאפ")
+      : h("span", { class: "note", text: "הקישור לבדיקה יופיע אחרי שם פרטי ומספר וואטסאפ תקין." }));
+  }
+
+  function coachError(text, key) {
+    var err = $("coach-error");
+    if (!err) return toast(text);
+    err.textContent = text;
+    err.hidden = false;
+    var input = key ? $("co-" + key) : null;
+    if (input && input.focus) input.focus();
+  }
+  function coachDetail(e) {
+    var d = String((e && e.details) || "");
+    for (var i = 0; i < COACH_DETAILS.length; i++) if (COACH_DETAILS[i][0].test(d)) return COACH_DETAILS[i][1];
+    return null;
+  }
+  function coachGone(e) { return /coach_not_found/.test(String(e && e.message)); }
+  function coachBusy(on) {
+    Array.prototype.forEach.call(document.querySelectorAll("#co-actions .btn"), function (b) { b.disabled = on; });
+  }
+
+  function saveCoach(status) {
+    if (coaches.uploading) return coachError("עוד מעלים את התמונה. רגע.");
+    var f = coaches.form;
+    var p = coachPayload(f, status);
+    var bad = coachProblem(p, Date.now());
+    if (bad) return coachError(bad[1], bad[0]);
+    coachBusy(true);
+    rpc("admin_save_coach", { coach: p }).then(function () {
+      toast(status === "published" ? "פורסם" : "נשמר כטיוטה");
+      f.dirty = false;
+      if (coaches.form === f && state.tab === "coaches") leaveCoachForm();
+      else if (coaches.form === f) coaches.form = null;
+    }).catch(function (e) {
+      coachBusy(false);
+      if (missingRpc(e)) return coachError("השרת עוד לא עודכן לגרסה הזו (v71). מריצים את העדכון ב־Supabase.");
+      if (coachGone(e)) return coachError("המאמן כבר לא קיים. חוזרים לרשימה ומרעננים.");
+      if (code(e) === "invalid_argument") return coachError(coachDetail(e) || errorText(e));
+      fail(e);
+    });
+  }
+
+  function archiveCoach(f) {
+    var prev = f.status;
+    var id = f.id;
+    leaveCoachForm(function () {
+      rpc("admin_set_coach_status", { coach: id, status: "archived" }).then(function () {
+        toast("הועבר לארכיון", "ביטול", function () {
+          rpc("admin_set_coach_status", { coach: id, status: prev }).then(function () {
+            toast("בוטל");
+            if (state.tab === "coaches" && !coaches.form) loadCoaches();
+          }).catch(fail);
+        });
+        if (state.tab === "coaches" && !coaches.form) loadCoaches();
+      }).catch(function (e) {
+        if (missingRpc(e)) return toast("השרת עוד לא עודכן לגרסה הזו (v71). מריצים את העדכון ב־Supabase.");
+        if (coachGone(e)) { toast("המאמן כבר לא קיים."); return loadCoaches(); }
+        fail(e);
+      });
+    });
+  }
+
+  function deleteCoach(f) {
+    var name = coachLine(f.first_name + " " + f.last_name);
+    askYes({ title: "למחוק את ״" + name + "״ לתמיד?", text: "אי אפשר לבטל.", ok: "מחיקה", danger: true }).then(function (yes) {
+      if (!yes) return;
+      coachBusy(true);
+      var gone = function () {
+        f.dirty = false;
+        coaches.rows = coaches.rows.filter(function (r) { return r.id !== f.id; });
+        if (coaches.form !== f) return;
+        if (state.tab === "coaches") leaveCoachForm();
+        else coaches.form = null;
+      };
+      rpc("admin_delete_coach", { coach: f.id }).then(function () {
+        toast("נמחק");
+        gone();
+      }).catch(function (e) {
+        coachBusy(false);
+        if (missingRpc(e)) return toast("השרת עוד לא עודכן לגרסה הזו (v71). מריצים את העדכון ב־Supabase.");
+        if (coachGone(e)) { toast("המאמן כבר לא קיים."); return gone(); }
+        fail(e);
+      });
     });
   }
 
@@ -3981,6 +4939,7 @@
       h("nav", { class: "list", "aria-label": "עוד מדורים" },
         link("#runs", "ריצות", "M14 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 21l3-6 3 2v4M6.5 11.5l3-3.5 4 1.5 2.5 3h3M11 15l2-5"),
         link("#offers", "הטבות ואירועים", "M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 8v10"),
+        link("#coaches", "מאמנים", "M12 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"),
         link("#races", "מרוצים", "M5 21V4M5 4h11l-2 4 2 4H5"),
         link("#system", "מערכת והגדרות", "M3 12h4l2-5 4 10 2-5h6")),
       accountCard());
