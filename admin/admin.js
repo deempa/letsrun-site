@@ -51,7 +51,8 @@
     test_push: "התראת בדיקה",
     offer_save: "שמירת הטבה או אירוע",
     offer_status: "שינוי מצב של הטבה או אירוע",
-    offer_delete: "מחיקת הטבה או אירוע"
+    offer_delete: "מחיקת הטבה או אירוע",
+    ban_lifted: "הסרת חסימה"
   };
   var PLATFORMS = { ios: "iPhone", android: "Android" };
   // The log's reason for a deletion from the console (admin_delete_user requires one; the admin types none).
@@ -249,7 +250,7 @@
   function code(e) {
     var m = (e && (e.message || e.error_description || e.msg)) || String(e || "");
     var known = ["mfa_required", "not_admin", "not_authenticated", "invalid_argument", "user_not_found", "message_not_found",
-      "group_run_not_found", "crew_not_found", "report_not_found", "flag_not_found", "cannot_delete_admin", "too_soon"];
+      "group_run_not_found", "crew_not_found", "report_not_found", "flag_not_found", "cannot_delete_admin", "too_soon", "still_suspended"];
     for (var i = 0; i < known.length; i++) if (m.indexOf(known[i]) >= 0) return known[i];
     if (/jwt|token|session/i.test(m)) return "session";
     return "other";
@@ -264,6 +265,7 @@
       case "flag_not_found": return "הסימון כבר לא קיים.";
       case "cannot_delete_admin": return "אי אפשר למחוק חשבון של מנהל.";
       case "too_soon": return "נשלחה בדיקה לפני פחות מחצי דקה. עוד רגע.";
+      case "still_suspended": return "החשבון מושעה. מחזירים אותו עם ביטול השעיה בכרטיס שלו.";
       case "session": return "החיבור פג. נכנסים שוב.";
       default: return "משהו השתבש. אפשר לנסות שוב.";
     }
@@ -1937,6 +1939,63 @@
         (s.outbox_failed ? " " + s.outbox_failed + " עדכונים ל־Resend נכשלו." : "") }));
   }
 
+  // Round 70 (C, v69): someone deleted from here can't sign up again. Their name and email are gone, only hashes stay,
+  // so this looks them up by the email they signed up with. The address is sent to be hashed; it's not kept or logged.
+  var BAN_REASONS = {
+    admin_delete: "נמחק מהניהול",
+    suspend: "הושעה ונמחק",
+    delete_while_suspended: "נמחק בזמן השעיה",
+    backfill: "הושעה"
+  };
+
+  function banCard() {
+    var input = h("input", { type: "email", dir: "ltr", autocomplete: "off", spellcheck: "false", placeholder: "כתובת המייל", "aria-label": "כתובת המייל" });
+    var check = h("button", { type: "submit", class: "btn ink small" }, "בדיקה");
+    var out = h("div", { class: "ban-out", "aria-live": "polite" });
+    var say = function (kind, title, rest) {
+      out.textContent = "";
+      out.appendChild(h("p", { class: "ban-line " + kind }, h("b", { text: title }), rest ? " " + rest : ""));
+    };
+    var lift = function (address, btn) {
+      btn.disabled = true;
+      rpc("admin_lift_ban", { email: address }).then(function (res) {
+        if (res && res.lifted) say("ok", "החסימה הוסרה.", "אפשר להירשם מחדש עם המייל הזה והחשבון שלו.");
+        else say("free", "המייל הזה לא חסום.", "אפשר להירשם איתו כרגיל.");
+      }).catch(function (e) {
+        btn.disabled = false;
+        if (missingRpc(e)) return fail(e);
+        say("warn", errorText(e));
+      });
+    };
+    var form = h("form", { class: "ban-form", novalidate: "novalidate" }, input, check);
+    form.onsubmit = function (ev) {
+      ev.preventDefault();
+      var address = input.value.trim();
+      if (!/^[^@\s]+@[^@\s]+$/.test(address)) { say("warn", "צריך כתובת מייל מלאה."); return input.focus(); }
+      check.disabled = true;
+      rpc("admin_ban_lookup", { email: address }).then(function (res) {
+        check.disabled = false;
+        if (!res || !res.banned) return say("free", "המייל הזה לא חסום.", "אפשר להירשם איתו כרגיל.");
+        var when = shortDate(res.banned_at);
+        var why = (BAN_REASONS[res.reason] || "נחסם") + (when ? (/^\d/.test(when) ? " ב־" : " ") + when : "") + ".";
+        if (res.still_suspended) return say("warn", "החשבון הזה מושעה.", "מחזירים אותו עם ביטול השעיה בכרטיס שלו.");
+        say("warn", "המייל הזה חסום.", why);
+        out.appendChild(h("p", { class: "note", text: "הסרת החסימה מאפשרת להירשם מחדש מאפס. הפרופיל והריצות הישנים לא חוזרים." }));
+        var btn = h("button", { type: "button", class: "btn ink ban-lift", onclick: function () { lift(address, btn); } }, "הסרת החסימה");
+        out.appendChild(btn);
+      }).catch(function (e) {
+        check.disabled = false;
+        if (missingRpc(e)) return fail(e);
+        say("warn", errorText(e));
+      });
+    };
+    return h("section", { class: "card ban-card", "aria-label": "להחזיר מישהו שנמחק" },
+      h("div", null,
+        h("h2", { class: "ban-title", text: "להחזיר מישהו שנמחק" }),
+        h("p", { class: "note", text: "כותבים את המייל שאיתו נרשם, ובודקים אם הוא חסום." })),
+      form, out);
+  }
+
   // A page's title row: the title, an optional count, and controls on the far side.
   function pageHead(title, count, side) {
     return h("div", { class: "page-head" },
@@ -1988,6 +2047,7 @@
     } }, svg("M4 6h16v12H4zM4 7l8 6 8-6"), "מנויי ניוזלטר");
     show(
       pageHead("משתמשים", h("span", { class: "page-count num", id: "users-total", dir: "ltr" })),
+      banCard(),
       h("div", { id: "nl-slot" }, h("p", { class: "loading" }, h("span", { class: "dot", "aria-hidden": "true" }), "טוענים…")),
       h("div", { class: "toolbar" },
         h("label", { class: "search" }, svg("M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4-4"), input),
@@ -2540,11 +2600,11 @@
         p.newsletter && p.newsletter.subscribed ? "המנוי לניוזלטר (יוסר גם מ־Resend)" : null
       ],
       suspend: p.suspended_at ? null : function () { suspend(p, null); },
-      run: function (ok, err, close) {
-        rpc("admin_delete_user", { target: p.id, reason: DELETE_REASON }).then(function (res) {
+      run: function (ok, err, close, allowReturn) {
+        rpc("admin_delete_user", deleteArgs(p.id, allowReturn)).then(function (res) {
           close();
           var n = (res && res.runs_cancelled) || 0;
-          toast("החשבון נמחק" + (n ? " · " + (n === 1 ? "ריצה אחת בוטלה" : n + " ריצות בוטלו") : ""));
+          toast("החשבון נמחק" + (allowReturn ? " · אפשר להירשם מחדש" : "") + (n ? " · " + (n === 1 ? "ריצה אחת בוטלה" : n + " ריצות בוטלו") : ""));
           reloadOpen().catch(function () { /* the counts refresh next time */ }).then(function () { updateCounts(); go("#users"); });
         }).catch(function (e) {
           ok.disabled = false;
@@ -2576,7 +2636,7 @@
         "ריצות קרובות שהם ארגנו יבוטלו, והמשתתפים יקבלו התראה",
         "המקומות שלהם בריצות, ההודעות בצ׳אטים, החיבורים והקבוצות"
       ],
-      run: function (ok, err, close) {
+      run: function (ok, err, close, allowReturn) {
         var done = 0, skipped = 0, total = list.length;
         var next = function () {
           if (!list.length) {
@@ -2586,7 +2646,7 @@
           }
           ok.textContent = "מוחקים… " + (done + skipped + 1) + "/" + total;
           var u = list.shift();
-          rpc("admin_delete_user", { target: u.id, reason: DELETE_REASON }).then(function () { done++; next(); }).catch(function (e) {
+          rpc("admin_delete_user", deleteArgs(u.id, allowReturn)).then(function () { done++; next(); }).catch(function (e) {
             var c = code(e);
             if (c === "user_not_found") { done++; return next(); }
             if (c === "cannot_delete_admin" || c === "invalid_argument") { skipped++; return next(); }
@@ -2601,8 +2661,15 @@
     });
   }
 
+  // Round 70 (v69): with "לאפשר הרשמה מחדש" on, the delete leaves no ban behind. Off, it's the same call as always.
+  function deleteArgs(id, allowReturn) {
+    var args = { target: id, reason: DELETE_REASON };
+    if (allowReturn) args.allow_return = true;
+    return args;
+  }
+
   // The delete sheet: o.title, o.gone (lines; nulls skipped), o.who (names, for several), o.suspend (offers a
-  // suspension instead), o.run(okButton, errorLine, close).
+  // suspension instead), o.run(okButton, errorLine, close, allowReturn).
   function deleteDialog(o) {
     var dlg = $("delete"), ok = $("delete-ok"), err = $("delete-error");
     $("delete-title").textContent = o.title;
@@ -2611,7 +2678,18 @@
     kl.textContent = "";
     o.gone.filter(Boolean).forEach(function (t) { gl.appendChild(h("li", { text: t })); });
     kl.appendChild(h("li", { text: "שורה ביומן הפעולות, בלי שם ובלי מייל (90 יום)" }));
-    kl.appendChild(h("li", { text: "חסימה: אי אפשר להירשם שוב עם אותו חשבון או מייל" }));
+    var banLine = h("li");
+    kl.appendChild(banLine);
+    var ret = $("delete-return"), showReturn = function () {
+      banLine.textContent = ret.checked ? "בלי חסימה: אפשר להירשם שוב מאפס" : "חסימה: אי אפשר להירשם שוב עם אותו חשבון או מייל";
+      $("delete-return-line").textContent = ret.checked
+        ? "אפשר יהיה להירשם שוב מאפס עם אותו מייל וחשבון."
+        : "כבוי: אי אפשר להירשם שוב עם אותו מייל וחשבון.";
+    };
+    ret.checked = false;
+    ret.disabled = false;
+    ret.onchange = showReturn;
+    showReturn();
     $("delete-who").textContent = o.who || "";
     $("delete-who").hidden = !o.who;
     $("delete-suggest").hidden = !o.suspend;
@@ -2629,7 +2707,7 @@
       if (ok.disabled) return;
       ok.disabled = true;
       err.hidden = true;
-      o.run(ok, err, close);
+      o.run(ok, err, close, ret.checked);
     };
     if (typeof dlg.showModal === "function") dlg.showModal();
     else dlg.setAttribute("open", "");
