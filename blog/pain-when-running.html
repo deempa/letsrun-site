@@ -61,6 +61,8 @@
   ]
 }
 </script>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="stylesheet" href="../assets/run.css?v=1">
 </head>
 <body>
 <header class="site-header">
@@ -69,11 +71,13 @@
     <nav class="nav" aria-label="ניווט ראשי"><a class="nav-link" href="/blog/">בלוג</a><a class="btn small" href="/#download">להורדה</a></nav>
   </div>
 </header>
-<main class="article">
+<main class="article" style="position:relative">
+  <div class="article-map" data-topo data-interval="0.06" data-strength="0.8" data-seed="120"></div>
   <article class="wrap">
     <a class="back" href="/blog/">← לכל הכתבות</a>
     <h1>כאב בריצה: מתי להמשיך, מתי לעצור, ואיך לא להיפצע</h1>
     <p class="meta">פציעות · <span class="num">10</span> דקות קריאה</p>
+    <img class="post-cover" src="../img/guides/pain-when-running.jpg" width="1000" alt="">
     <p class="byline"><span>מאת <b>צוות בוא נרוץ</b></span><span>פורסם <time datetime="2026-11-02">2 בנובמבר 2026</time></span><span>מבוסס על מחקרים, ראו בסוף</span></p>
     <div class="body">
       <p class="intro">כמעט כל מי שרץ מספיק זמן מכיר את הרגע: משהו בברך, בשוק או בעקב מרגיש לא בסדר. השאלה שעולה מיד היא אם זה &quot;סתם&quot; או התחלה של פציעה. אין תשובה אחת שמתאימה לכולם, אבל יש דרך מסודרת לחשוב על זה, ויש מחקר חדש וגדול שמשנה את מה שידענו על הסיבה העיקרית לפציעות: <b>לא כמה רצים בשבוע, אלא כמה רחוק רצים בריצה אחת.</b></p>
@@ -265,11 +269,14 @@
     </div>
   </article>
 </main>
+<div class="finish" aria-hidden="true"></div>
 <footer class="site-footer">
   <div class="wrap">
     <span>© <span class="num">2026</span> בוא נרוץ</span>
     <nav aria-label="קישורים"><a href="../privacy/">מדיניות פרטיות</a><a href="../terms/">תנאי שימוש</a><a href="../delete-account/">מחיקת חשבון</a><a href="/">דף הבית</a><a href="https://www.instagram.com/letsrun.il/" rel="noopener">אינסטגרם</a></nav>
   </div>
 </footer>
+<script src="../assets/topo.js?v=1"></script>
+<script src="../assets/run.js?v=1"></script>
 </body>
 </html>

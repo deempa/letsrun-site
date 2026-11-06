@@ -61,6 +61,8 @@
   ]
 }
 </script>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="stylesheet" href="../assets/run.css?v=1">
 </head>
 <body>
 <header class="site-header">
@@ -69,11 +71,13 @@
     <nav class="nav" aria-label="ניווט ראשי"><a class="nav-link" href="/blog/">בלוג</a><a class="btn small" href="/#download">להורדה</a></nav>
   </div>
 </header>
-<main class="article">
+<main class="article" style="position:relative">
+  <div class="article-map" data-topo data-interval="0.06" data-strength="0.8" data-seed="58"></div>
   <article class="wrap">
     <a class="back" href="/blog/">← לכל הכתבות</a>
     <h1>למה קל יותר לרוץ ביחד: מה המחקר אומר על ריצה עם אחרים</h1>
     <p class="meta">מחקר · <span class="num">8</span> דקות קריאה</p>
+    <img class="post-cover" src="../img/guides/running-together-science.jpg" width="1000" alt="">
     <p class="byline"><span>מאת <b>צוות בוא נרוץ</b></span><span>פורסם <time datetime="2026-10-18">18 באוקטובר 2026</time></span><span>מבוסס על מחקרים, ראו בסוף</span></p>
     <div class="body">
       <p class="intro">כל מי שרץ פעם עם חבר מכיר את זה: אותו מסלול, אותו מרחק, ופתאום הקילומטר החמישי עובר בלי שהרגשתם. זו לא רק תחושה. פסיכולוגים, כלכלנים ואנתרופולוגים מדדו את זה, ומצאו לפחות שלושה מנגנונים שונים: אנחנו מתאמצים יותר כשמישהו תלוי בנו, הרגלים עוברים בין חברים כמו הדבקה, ומאמץ משותף משנה את הדרך שבה הגוף חווה כאב. הנה מה שידוע, מה עדיין לא, ואיך להשתמש בזה.</p>
@@ -224,11 +228,14 @@
     </div>
   </article>
 </main>
+<div class="finish" aria-hidden="true"></div>
 <footer class="site-footer">
   <div class="wrap">
     <span>© <span class="num">2026</span> בוא נרוץ</span>
     <nav aria-label="קישורים"><a href="../privacy/">מדיניות פרטיות</a><a href="../terms/">תנאי שימוש</a><a href="../delete-account/">מחיקת חשבון</a><a href="/">דף הבית</a><a href="https://www.instagram.com/letsrun.il/" rel="noopener">אינסטגרם</a></nav>
   </div>
 </footer>
+<script src="../assets/topo.js?v=1"></script>
+<script src="../assets/run.js?v=1"></script>
 </body>
 </html>

@@ -61,6 +61,8 @@
   ]
 }
 </script>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="stylesheet" href="../assets/run.css?v=1">
 </head>
 <body>
 <header class="site-header">
@@ -69,11 +71,13 @@
     <nav class="nav" aria-label="ניווט ראשי"><a class="nav-link" href="/blog/">בלוג</a><a class="btn small" href="/#download">להורדה</a></nav>
   </div>
 </header>
-<main class="article">
+<main class="article" style="position:relative">
+  <div class="article-map" data-topo data-interval="0.06" data-strength="0.8" data-seed="124"></div>
   <article class="wrap">
     <a class="back" href="/blog/">← לכל הכתבות</a>
     <h1>כאב בצד בריצה: למה זה קורה ומה באמת עוזר</h1>
     <p class="meta">מתחילים · <span class="num">6</span> דקות קריאה</p>
+    <img class="post-cover" src="../img/guides/side-stitch.jpg" width="1000" alt="">
     <p class="byline"><span>מאת <b>צוות בוא נרוץ</b></span><span>פורסם <time datetime="2026-11-02">2 בנובמבר 2026</time></span><span>מבוסס על מחקרים, ראו בסוף</span></p>
     <div class="body">
       <p class="intro">אתם בקילומטר השני, הכול זורם, ופתאום דקירה חדה מתחת לצלעות. קשה לנשום עמוק, קשה להמשיך. כמעט כל רץ מכיר את זה, ובכל זאת זו אחת התופעות הכי פחות מובנות בספורט. ההסבר שרובנו שמענו בילדות, &quot;שתית מהר מדי&quot;, נכון רק בחלקו. הנה מה שהמחקר כן יודע, ומה אפשר לעשות עם זה.</p>
@@ -218,11 +222,14 @@
     </div>
   </article>
 </main>
+<div class="finish" aria-hidden="true"></div>
 <footer class="site-footer">
   <div class="wrap">
     <span>© <span class="num">2026</span> בוא נרוץ</span>
     <nav aria-label="קישורים"><a href="../privacy/">מדיניות פרטיות</a><a href="../terms/">תנאי שימוש</a><a href="../delete-account/">מחיקת חשבון</a><a href="/">דף הבית</a><a href="https://www.instagram.com/letsrun.il/" rel="noopener">אינסטגרם</a></nav>
   </div>
 </footer>
+<script src="../assets/topo.js?v=1"></script>
+<script src="../assets/run.js?v=1"></script>
 </body>
 </html>

@@ -61,6 +61,8 @@
   ]
 }
 </script>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="stylesheet" href="../assets/run.css?v=1">
 </head>
 <body>
 <header class="site-header">
@@ -69,11 +71,13 @@
     <nav class="nav" aria-label="ניווט ראשי"><a class="nav-link" href="/blog/">בלוג</a><a class="btn small" href="/#download">להורדה</a></nav>
   </div>
 </header>
-<main class="article">
+<main class="article" style="position:relative">
+  <div class="article-map" data-topo data-interval="0.06" data-strength="0.8" data-seed="134"></div>
   <article class="wrap">
     <a class="back" href="/blog/">← לכל הכתבות</a>
     <h1>לרוץ לאט כדי לרוץ מהר: שיטת 80/20 לרצים חובבים</h1>
     <p class="meta">אימון · <span class="num">7</span> דקות קריאה</p>
+    <img class="post-cover" src="../img/guides/run-slow-80-20.jpg" width="1000" alt="">
     <p class="byline"><span>מאת <b>צוות בוא נרוץ</b></span><span>פורסם <time datetime="2026-10-18">18 באוקטובר 2026</time></span><span>מבוסס על מחקרים, ראו בסוף</span></p>
     <div class="body">
       <p class="intro">רוב הרצים החובבים רצים כמעט כל ריצה באותו קצב: לא קל באמת, לא קשה באמת, &quot;בסדר&quot;. רצי הסבולת הטובים בעולם עושים משהו אחר: בערך 80% מהאימון שלהם קל מאוד, ו-20% קשה באמת. כמעט כלום באמצע. הגישה הזו נקראת <b>80/20</b>, או אימון מקוטב, והיא נבדקה גם בניסויים מבוקרים. הנה מה ידוע, מה פחות, ואיך מיישמים את זה עם שלוש או ארבע ריצות בשבוע.</p>
@@ -235,11 +239,14 @@
     </div>
   </article>
 </main>
+<div class="finish" aria-hidden="true"></div>
 <footer class="site-footer">
   <div class="wrap">
     <span>© <span class="num">2026</span> בוא נרוץ</span>
     <nav aria-label="קישורים"><a href="../privacy/">מדיניות פרטיות</a><a href="../terms/">תנאי שימוש</a><a href="../delete-account/">מחיקת חשבון</a><a href="/">דף הבית</a><a href="https://www.instagram.com/letsrun.il/" rel="noopener">אינסטגרם</a></nav>
   </div>
 </footer>
+<script src="../assets/topo.js?v=1"></script>
+<script src="../assets/run.js?v=1"></script>
 </body>
 </html>

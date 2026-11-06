@@ -34,6 +34,8 @@
   ]
 }
 </script>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="stylesheet" href="../assets/run.css?v=1">
 </head>
 <body>
 <header class="site-header">
@@ -42,11 +44,13 @@
     <nav class="nav" aria-label="ניווט ראשי"><a class="nav-link" href="/blog/">בלוג</a><a class="btn small" href="/#download">להורדה</a></nav>
   </div>
 </header>
-<main class="article">
+<main class="article" style="position:relative">
+  <div class="article-map" data-topo data-interval="0.06" data-strength="0.8" data-seed="21"></div>
   <div class="wrap">
     <a class="back" href="/blog/">← לכל הכתבות</a>
     <h1>איך לבחור שותף/ה לריצה לפי קצב</h1>
     <p class="meta">קצב · 4 דקות קריאה</p>
+    <img class="post-cover" src="../img/guides/pace-partner.jpg" width="1000" alt="">
     <div class="body">
       <p>הקילומטר הראשון עם מישהו חדש תמיד מרגיש בסדר. ההתרגשות, השיחה, הרגליים עוד טריות. הפער מתחיל להורגש בערך בקילומטר השלישי: מישהו מתחיל לנשום כבד ולהשתתק, ומישהו אחר מאט בכוונה ומרגיש שהוא מחכה. שניהם נהנים פחות.</p>
       <p>החדשות הטובות הן שאת הפער הזה אפשר לבדוק מראש, עוד לפני שיוצאים.</p>
@@ -71,11 +75,14 @@
     </div>
   </div>
 </main>
+<div class="finish" aria-hidden="true"></div>
 <footer class="site-footer">
   <div class="wrap">
     <span>© <span class="num">2026</span> בוא נרוץ</span>
     <nav aria-label="קישורים"><a href="../privacy/">מדיניות פרטיות</a><a href="../terms/">תנאי שימוש</a><a href="../delete-account/">מחיקת חשבון</a><a href="/">דף הבית</a><a href="https://www.instagram.com/letsrun.il/" rel="noopener">אינסטגרם</a></nav>
   </div>
 </footer>
+<script src="../assets/topo.js?v=1"></script>
+<script src="../assets/run.js?v=1"></script>
 </body>
 </html>
