@@ -48,7 +48,7 @@
   <p id="lead">הדף שחיפשת לא נמצא.</p>
   <a class="btn primary" id="open" href="#" hidden>פתיחה באפליקציה</a>
   <a class="btn ghost" id="ios" href="https://apps.apple.com/il/app/id6820719707" rel="noopener" hidden>אין לך את האפליקציה? הורדה לאייפון</a>
-  <p class="note" id="android" hidden>באנדרואיד — בקרוב ב-Google Play.</p>
+  <a class="btn ghost" id="android" href="https://play.google.com/store/apps/details?id=com.liorrabanian.letsrun" rel="noopener" hidden>אין לך את האפליקציה? הורדה לאנדרואיד</a>
   <a class="home" id="home" href="./">לדף הבית של בוא נרוץ</a>
 </main>
 <script>
@@ -78,8 +78,10 @@
   document.getElementById('lead').textContent = texts[2];
   var open = document.getElementById('open');
   open.href = app; open.hidden = false;
-  document.getElementById('ios').hidden = false;
-  document.getElementById('android').hidden = false;
+  // Each phone sees its own store; a computer sees both.
+  var ua = navigator.userAgent;
+  document.getElementById('ios').hidden = /Android/i.test(ua);
+  document.getElementById('android').hidden = /iPhone|iPad/i.test(ua);
   // On phones, try the app right away; if it isn't installed the page simply stays.
   if (/iPhone|iPad|Android/i.test(navigator.userAgent)) {
     setTimeout(function () { location.href = app; }, 350);

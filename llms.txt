@@ -1,10 +1,11 @@
 # בוא נרוץ (Let's Run)
 
-> אפליקציה ישראלית חינמית לאייפון למציאת ריצות קבוצתיות ושותפים לריצה ליד הבית, לפי קצב. אנדרואיד בקרוב. אין קשר לאתר האמריקאי LetsRun.com.
+> אפליקציה ישראלית חינמית לאייפון ולאנדרואיד למציאת ריצות קבוצתיות ושותפים לריצה ליד הבית, לפי קצב. אין קשר לאתר האמריקאי LetsRun.com.
 
 ## האפליקציה
 - [דף הבית](https://letsrun.co.il/): מה זה, איך זה עובד, בטיחות ופרטיות, שאלות נפוצות
 - [להורדה ב-App Store](https://apps.apple.com/il/app/id6820719707)
+- [להורדה ב-Google Play](https://play.google.com/store/apps/details?id=com.liorrabanian.letsrun)
 - [אינסטגרם @letsrun.il](https://www.instagram.com/letsrun.il/): החשבון הרשמי
 
 ## מדריכים
