@@ -267,23 +267,8 @@
     $$('a,img', rail).forEach(function (el) { el.setAttribute('draggable', 'false'); });
   });
 
-  /* ---------- Race bib: tilt and rolling number ---------- */
+  /* ---------- Race bib: tilt ---------- */
   $$('[data-bib]').forEach(function (bib) {
-    var num = $('.bib-num', bib);
-    if (num && !reduce) {
-      var target = num.textContent, played = false;
-      seen(bib, function (on) {
-        if (!on || played) return;
-        played = true;
-        var t0 = performance.now();
-        (function tick(now) {
-          var t = clamp((now - t0) / 700, 0, 1), out = '';
-          for (var i = 0; i < target.length; i++) out += t > (i + 1) / (target.length + 1) ? target[i] : Math.floor(Math.random() * 10);
-          num.textContent = t >= 1 ? target : out;
-          if (t < 1) requestAnimationFrame(tick);
-        })(t0);
-      }, { threshold: 0.4 });
-    }
     if (fine && !reduce) {
       bib.addEventListener('pointermove', function (e) {
         var r = bib.getBoundingClientRect();
