@@ -160,7 +160,6 @@ html.js body { overflow-x: clip; }
 .bib-tear::before { content: ""; position: absolute; top: 0; inset-inline: 14px; border-top: 2px dashed #B7B7B0; }
 .bib:hover .bib-tear { transform: translateY(5px) rotate(-1deg); }
 .bib-tear .store { flex: 1 1 0; justify-content: center; height: 56px; padding: 0 10px; }
-.bib-tear .store.play { background: #fff; }
 
 /* ---------- Finish line ---------- */
 .finish { height: 28px; background: conic-gradient(var(--ink) 25%, #fff 0 50%, var(--ink) 0 75%, #fff 0) 0 0 / 28px 28px; border-block: 2px solid var(--ink); }
